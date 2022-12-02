@@ -108,8 +108,16 @@ DLL_EXPORTS(Webview_ExecuteScript_Sync, BOOL)
       script, WRL::Callback<ICoreWebView2ExecuteScriptCompletedHandler>(
                   [waiter, ptr, size](HRESULT errorCode,
                                       LPCWSTR resultObjectAsJson) -> HRESULT {
-                    *ptr = resultObjectAsJson;
-                    *size = lstrlenW(resultObjectAsJson) * 2 + 2;
+                    uint32_t sizeTmp = lstrlenW(resultObjectAsJson) * 2 + 2;
+                    LPWSTR newStr = static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
+                    if (newStr) {
+                      newStr[sizeTmp - 1] = 0;
+                      lstrcpyW(newStr, resultObjectAsJson);
+
+                      *ptr = newStr;
+                      *size = sizeTmp;
+                    }
+
                     ActiveWaitable(waiter);
 
                     return S_OK;
