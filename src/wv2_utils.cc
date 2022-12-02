@@ -54,7 +54,6 @@ void WaitOfSleep(Waitable* obj, uint32_t max_ms) {
   if (max_ms <= 0) return;
   if (obj->isActive) return;
 
-  MSG uiMsg;
   uint32_t nCount = 0;
   while (!obj->isActive) {
     Sleep(10);
