@@ -5,6 +5,12 @@
 #include <mutex>
 #include <chrono>
 
+#include <stdint.h>
+
+static inline uint16_t byteswap_ushort(uint16_t number) {
+  return _byteswap_ushort(number);
+}
+
 using namespace Microsoft;
 
 DLL_EXPORTS(Deferral_Complete, BOOL)(ICoreWebView2Deferral* deferral) {
@@ -89,3 +95,29 @@ DLL_EXPORTS(Utility_Malloc, void*)(uint32_t size) {
 }
 
 DLL_EXPORTS(Utility_Mfree, void)(void* mem) { LocalFree(mem); }
+
+namespace conv {
+
+LPWSTR ToUnicode(const char* str) {
+  size_t length = lstrlenA(str);
+  if (!str || length <= 0) return NULL;
+  size_t bLength = MultiByteToWideChar(CP_ACP, NULL, str, length, NULL, NULL);
+  wchar_t* buf =
+      (wchar_t*)wv2_Utility_Malloc(bLength * sizeof(wchar_t) + sizeof(wchar_t));
+  MultiByteToWideChar(CP_ACP, NULL, str, length, buf, bLength);
+  buf[bLength] = 0;
+  return buf;
+}
+
+LPSTR ToAnsi(const wchar_t* str) {
+  size_t length = lstrlenW(str);
+  if (!str || length <= 0) return NULL;
+  size_t bLength =
+      WideCharToMultiByte(CP_ACP, NULL, str, length, NULL, NULL, NULL, NULL);
+  char* buf = (char*)wv2_Utility_Malloc(bLength * sizeof(char*) + sizeof(char));
+  WideCharToMultiByte(CP_ACP, NULL, str, length, buf, bLength, NULL, NULL);
+  buf[bLength] = 0;
+  return buf;
+}
+
+}  // namespace conv

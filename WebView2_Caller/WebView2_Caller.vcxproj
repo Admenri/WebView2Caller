@@ -24,6 +24,7 @@
     <ProjectGuid>{745cbf71-9291-462c-8909-e897df00fd19}</ProjectGuid>
     <RootNamespace>WebView2Caller</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <WebView2LoaderPreference>Static</WebView2LoaderPreference>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -100,7 +101,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>shlwapi.lib;kernel32.lib;user32.lib;shell32.lib</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;kernel32.lib;user32.lib;shell32.lib;Advapi32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -120,7 +121,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>shlwapi.lib;kernel32.lib;user32.lib;shell32.lib</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;kernel32.lib;user32.lib;shell32.lib;Advapi32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -136,7 +137,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>shlwapi.lib;kernel32.lib;user32.lib;shell32.lib</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;kernel32.lib;user32.lib;shell32.lib;Advapi32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -156,23 +157,24 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>shlwapi.lib;kernel32.lib;user32.lib;shell32.lib</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;kernel32.lib;user32.lib;shell32.lib;Advapi32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\wv2_controller.cc" />
+    <ClCompile Include="..\src\wv2_cookie.cc" />
     <ClCompile Include="..\src\wv2_env.cc" />
     <ClCompile Include="..\src\wv2_webview.cc" />
     <ClCompile Include="..\src\wv2_utils.cc" />
     <ClCompile Include="dllmain.cc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Release\ewebview2.e" />
-    <None Include="..\Release\ewv2_test.e" />
+    <None Include="..\CodesLab\ewebview2.e" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\wv2_controller.h" />
+    <ClInclude Include="..\src\wv2_cookie.h" />
     <ClInclude Include="..\src\wv2_env.h" />
     <ClInclude Include="..\src\wv2_webview.h" />
     <ClInclude Include="..\src\wv2_types.h" />

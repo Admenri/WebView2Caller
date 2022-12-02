@@ -837,3 +837,15 @@ DLL_EXPORTS(Webview_SetUserAgent, BOOL)
 
   return ret;
 }
+
+DLL_EXPORTS(Webview_GetCookieManager, BOOL)
+(ICoreWebView2_2* webview, LPVOID* ptr) {
+  if (!webview) return FALSE;
+
+  ICoreWebView2CookieManager* ckManager = nullptr;
+  auto ret = SUCCEEDED(webview->get_CookieManager(&ckManager));
+
+  *ptr = ckManager;
+
+  return ret;
+}

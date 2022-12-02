@@ -8,6 +8,9 @@
     <Filter Include="res">
       <UniqueIdentifier>{c1d08833-01d5-4fb0-996c-e66924e260b1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="e_port">
+      <UniqueIdentifier>{f3e6e473-a93c-4250-9c99-87691c6a8c15}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cc">
@@ -23,6 +26,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\wv2_webview.cc">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\wv2_cookie.cc">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
@@ -45,6 +51,9 @@
     <ClInclude Include="resource.h">
       <Filter>res</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\wv2_cookie.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="dll_exportres.rc">
@@ -55,7 +64,8 @@
     <None Include="packages.config">
       <Filter>res</Filter>
     </None>
-    <None Include="..\Release\ewebview2.e" />
-    <None Include="..\Release\ewv2_test.e" />
+    <None Include="..\CodesLab\ewebview2.e">
+      <Filter>e_port</Filter>
+    </None>
   </ItemGroup>
 </Project>
