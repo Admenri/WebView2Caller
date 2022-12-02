@@ -232,6 +232,12 @@ DLL_EXPORTS(Webview_CapturePreview_Sync, BOOL)
   return SUCCEEDED(hr);
 }
 
+DLL_EXPORTS(Webview_OpenDevTools, uint32_t)(ICoreWebView2* webview) {
+  if (!webview) return FALSE;
+
+  return SUCCEEDED(webview->OpenDevToolsWindow());
+}
+
 
 
 DLL_EXPORTS(Webview_NewWindowRequestArgs_GetURL, BOOL)
@@ -672,4 +678,162 @@ DLL_EXPORTS(Webview_Detach_NavigationCompleted, BOOL)
   EventRegistrationToken token = {value};
 
   return SUCCEEDED(webview->remove_NavigationCompleted(token));
+}
+
+
+DLL_EXPORTS(Webview_GetFullscreenMode, BOOL)
+(ICoreWebView2* webview) {
+  if (!webview) return FALSE;
+
+  BOOL ret = FALSE;
+  webview->get_ContainsFullScreenElement(&ret);
+
+  return ret;
+}
+
+using ContainsFullScreenElementChangedCB = HRESULT(CALLBACK*)(LPVOID wv,LPVOID param);
+DLL_EXPORTS(Webview_Attach_ContainsFullScreenElementChanged, int64_t)
+(ICoreWebView2* webview, ContainsFullScreenElementChangedCB callback,
+ LPVOID param) {
+  if (!webview) return FALSE;
+
+  EventRegistrationToken token;
+
+  webview->add_ContainsFullScreenElementChanged(
+      WRL::Callback<ICoreWebView2ContainsFullScreenElementChangedEventHandler>(
+          [callback, param](ICoreWebView2* sender, IUnknown* args) -> HRESULT {
+            sender->AddRef();
+
+            HRESULT hr = callback(sender, param);
+
+            return hr;
+          })
+          .Get(),
+      &token);
+
+  return token.value;
+}
+
+DLL_EXPORTS(Webview_Detach_ContainsFullScreenElementChanged, BOOL)
+(ICoreWebView2* webview, int64_t value) {
+  if (!webview) return FALSE;
+  EventRegistrationToken token = {value};
+
+  return SUCCEEDED(webview->remove_ContainsFullScreenElementChanged(token));
+}
+
+struct WebView2Settings {
+  BOOL enableScripts;
+  BOOL enableWebMessage;
+  BOOL enableDefaultDialogs;
+  BOOL enableStatusBar;
+  BOOL enableDevTools;
+  BOOL enableDefaultContextMenu;
+  BOOL enableHostJSObject;
+  BOOL enableZoomControl;
+  BOOL enableBuiltInError;
+  BOOL enableBrowserAcceleratorKeys;
+  BOOL enablePasswdAutoSave;
+  BOOL enableAutoFillin;
+  BOOL enablePinchZoom;
+  BOOL enableSwipeNavigation;
+  COREWEBVIEW2_PDF_TOOLBAR_ITEMS hiddenPdfToolbar;
+};
+
+DLL_EXPORTS(Webview_GetSettings, BOOL)
+(ICoreWebView2* webview, WebView2Settings* pset) {
+  if (!webview) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2Settings> settings = nullptr;
+  auto ret = SUCCEEDED(webview->get_Settings(&settings));
+
+  WRL::ComPtr<ICoreWebView2Settings7> target = nullptr;
+  settings->QueryInterface<ICoreWebView2Settings7>(&target);
+
+  if (pset) {
+    target->get_IsScriptEnabled(&pset->enableScripts);
+    target->get_IsWebMessageEnabled(&pset->enableWebMessage);
+    target->get_AreDefaultScriptDialogsEnabled(&pset->enableDefaultDialogs);
+    target->get_IsStatusBarEnabled(&pset->enableStatusBar);
+    target->get_AreDevToolsEnabled(&pset->enableDevTools);
+    target->get_AreDefaultContextMenusEnabled(&pset->enableDefaultContextMenu);
+    target->get_AreHostObjectsAllowed(&pset->enableHostJSObject);
+    target->get_IsZoomControlEnabled(&pset->enableZoomControl);
+    target->get_IsBuiltInErrorPageEnabled(&pset->enableBuiltInError);
+    target->get_AreBrowserAcceleratorKeysEnabled(
+        &pset->enableBrowserAcceleratorKeys);
+    target->get_IsPasswordAutosaveEnabled(&pset->enablePasswdAutoSave);
+    target->get_IsGeneralAutofillEnabled(&pset->enableAutoFillin);
+    target->get_IsPinchZoomEnabled(&pset->enablePinchZoom);
+    target->get_IsSwipeNavigationEnabled(&pset->enableSwipeNavigation);
+    target->get_HiddenPdfToolbarItems(&pset->hiddenPdfToolbar);
+  }
+
+  return ret;
+}
+
+DLL_EXPORTS(Webview_SetSettings, BOOL)
+(ICoreWebView2* webview, WebView2Settings* pset) {
+  if (!webview) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2Settings> settings = nullptr;
+  auto ret = SUCCEEDED(webview->get_Settings(&settings));
+
+  WRL::ComPtr<ICoreWebView2Settings7> target = nullptr;
+  settings->QueryInterface<ICoreWebView2Settings7>(&target);
+
+  if (pset) {
+    target->put_IsScriptEnabled(pset->enableScripts);
+    target->put_IsWebMessageEnabled(pset->enableWebMessage);
+    target->put_AreDefaultScriptDialogsEnabled(pset->enableDefaultDialogs);
+    target->put_IsStatusBarEnabled(pset->enableStatusBar);
+    target->put_AreDevToolsEnabled(pset->enableDevTools);
+    target->put_AreDefaultContextMenusEnabled(pset->enableDefaultContextMenu);
+    target->put_AreHostObjectsAllowed(pset->enableHostJSObject);
+    target->put_IsZoomControlEnabled(pset->enableZoomControl);
+    target->put_IsBuiltInErrorPageEnabled(pset->enableBuiltInError);
+    target->put_AreBrowserAcceleratorKeysEnabled(
+        pset->enableBrowserAcceleratorKeys);
+    target->put_IsPasswordAutosaveEnabled(pset->enablePasswdAutoSave);
+    target->put_IsGeneralAutofillEnabled(pset->enableAutoFillin);
+    target->put_IsPinchZoomEnabled(pset->enablePinchZoom);
+    target->put_IsSwipeNavigationEnabled(pset->enableSwipeNavigation);
+    target->put_HiddenPdfToolbarItems(pset->hiddenPdfToolbar);
+  }
+
+  return ret;
+}
+
+DLL_EXPORTS(Webview_GetUserAgent, BOOL)
+(ICoreWebView2* webview, LPVOID* ptr, uint32_t* size) {
+  if (!webview) return FALSE;
+  
+  WRL::ComPtr<ICoreWebView2Settings> settings = nullptr;
+  auto ret = SUCCEEDED(webview->get_Settings(&settings));
+
+  WRL::ComPtr<ICoreWebView2Settings2> rsettings = nullptr;
+  settings->QueryInterface<ICoreWebView2Settings2>(&rsettings);
+
+  LPWSTR strptr = nullptr;
+  rsettings->get_UserAgent(&strptr);
+
+  *ptr = strptr;
+  *size = lstrlenW(strptr) * 2 + 2;
+
+  return ret;
+}
+
+DLL_EXPORTS(Webview_SetUserAgent, BOOL)
+(ICoreWebView2* webview, LPWSTR ua) {
+  if (!webview) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2Settings> settings = nullptr;
+  auto ret = SUCCEEDED(webview->get_Settings(&settings));
+
+  WRL::ComPtr<ICoreWebView2Settings2> rsettings = nullptr;
+  settings->QueryInterface<ICoreWebView2Settings2>(&rsettings);
+
+  rsettings->put_UserAgent(ua);
+
+  return ret;
 }

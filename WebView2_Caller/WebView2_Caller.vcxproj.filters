@@ -55,5 +55,7 @@
     <None Include="packages.config">
       <Filter>res</Filter>
     </None>
+    <None Include="..\Release\ewebview2.e" />
+    <None Include="..\Release\ewv2_test.e" />
   </ItemGroup>
 </Project>

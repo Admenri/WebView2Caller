@@ -166,6 +166,8 @@
     <ClCompile Include="dllmain.cc" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\Release\ewebview2.e" />
+    <None Include="..\Release\ewv2_test.e" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
