@@ -913,11 +913,14 @@ DLL_EXPORTS(Webview_SetUserAgent, BOOL)
 }
 
 DLL_EXPORTS(Webview_GetCookieManager, BOOL)
-(ICoreWebView2_2* webview, LPVOID* ptr) {
+(ICoreWebView2* webview, LPVOID* ptr) {
   if (!webview) return FALSE;
 
+  WRL::ComPtr<ICoreWebView2_2> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_2>(&tmpWv);
+
   ICoreWebView2CookieManager* ckManager = nullptr;
-  auto ret = SUCCEEDED(webview->get_CookieManager(&ckManager));
+  auto ret = SUCCEEDED(tmpWv->get_CookieManager(&ckManager));
 
   *ptr = ckManager;
 
@@ -925,10 +928,13 @@ DLL_EXPORTS(Webview_GetCookieManager, BOOL)
 }
 
 DLL_EXPORTS(Webview_OpenTaskManager, BOOL)
-(ICoreWebView2_6* webview) {
+(ICoreWebView2* webview) {
   if (!webview) return FALSE;
 
-  auto ret = SUCCEEDED(webview->OpenTaskManagerWindow());
+  WRL::ComPtr<ICoreWebView2_6> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_6>(&tmpWv);
+
+  auto ret = SUCCEEDED(tmpWv->OpenTaskManagerWindow());
 
   return ret;
 }
@@ -1029,4 +1035,58 @@ DLL_EXPORTS(Webview_Detach_PermissionRequested, BOOL)
   EventRegistrationToken token = {value};
 
   return SUCCEEDED(webview->remove_PermissionRequested(token));
+}
+
+DLL_EXPORTS(Webview_IsDefaultDownloadDialogOpen, BOOL)
+(ICoreWebView2* webview) {
+  if (!webview) return FALSE;
+  
+  WRL::ComPtr<ICoreWebView2_9> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_9>(&tmpWv);
+
+  BOOL ret = FALSE;
+
+  tmpWv->get_IsDefaultDownloadDialogOpen(&ret);
+
+  return ret;
+}
+
+DLL_EXPORTS(Webview_OpenDefaultDownloadDialog, BOOL)
+(ICoreWebView2* webview) {
+  if (!webview) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2_9> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_9>(&tmpWv);
+
+  return SUCCEEDED(tmpWv->OpenDefaultDownloadDialog());
+}
+
+DLL_EXPORTS(Webview_CloseDefaultDownloadDialog, BOOL)
+(ICoreWebView2* webview) {
+  if (!webview) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2_9> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_9>(&tmpWv);
+
+  return SUCCEEDED(tmpWv->CloseDefaultDownloadDialog());
+}
+
+DLL_EXPORTS(Webview_GetDefaultDownloadDialogMargin, BOOL)
+(ICoreWebView2* webview, POINT* pt) {
+  if (!webview) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2_9> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_9>(&tmpWv);
+
+  return SUCCEEDED(tmpWv->get_DefaultDownloadDialogMargin(pt));
+}
+
+DLL_EXPORTS(Webview_SetDefaultDownloadDialogMargin, BOOL)
+(ICoreWebView2* webview, POINT* pt) {
+  if (!webview) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2_9> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_9>(&tmpWv);
+
+  return SUCCEEDED(tmpWv->put_DefaultDownloadDialogMargin(*pt));
 }

@@ -55,18 +55,15 @@ static DWORD WINAPI DownloadAndInstallWV2RT(_In_ LPVOID lpParameter) {
   return returnCode;
 }
 
-DLL_EXPORTS(Global_CheckEdgeRuntime, BOOL)(LPWSTR path, BOOL allowDownload, DownloadRuntimeCB callback) {
+DLL_EXPORTS(Global_CheckEdgeRuntime, BOOL)
+(LPWSTR path, BOOL allowDownload, DownloadRuntimeCB callback) {
   LPWSTR ver = nullptr;
   HRESULT hr = GetAvailableCoreWebView2BrowserVersionString(path, &ver);
-  if (hr == S_OK && ver) {
+  if (hr == S_OK && ver)
     return TRUE;
-  } else {
-    if (allowDownload) {
-      CreateThread(0, 0, DownloadAndInstallWV2RT, callback, 0, 0);
-    } else {
-      return FALSE;
-    }
-  }
+  else if (allowDownload)
+    CreateThread(0, 0, DownloadAndInstallWV2RT, callback, 0, 0);
+
   return FALSE;
 }
 
