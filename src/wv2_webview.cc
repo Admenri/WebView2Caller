@@ -923,3 +923,110 @@ DLL_EXPORTS(Webview_GetCookieManager, BOOL)
 
   return ret;
 }
+
+DLL_EXPORTS(Webview_OpenTaskManager, BOOL)
+(ICoreWebView2_6* webview) {
+  if (!webview) return FALSE;
+
+  auto ret = SUCCEEDED(webview->OpenTaskManagerWindow());
+
+  return ret;
+}
+
+
+
+DLL_EXPORTS(Webview_PermissionRequestArgs_GetURL, BOOL)
+(ICoreWebView2PermissionRequestedEventArgs* args, LPVOID* ptr, uint32_t* size) {
+  if (!args) return FALSE;
+  
+  LPWSTR url = nullptr;
+
+  auto ret = SUCCEEDED(args->get_Uri(&url));
+  
+  *ptr = url;
+  *size = lstrlenW(url) * 2 + 2;
+
+  return ret;
+}
+
+DLL_EXPORTS(Webview_PermissionRequestArgs_GetType, int)
+(ICoreWebView2PermissionRequestedEventArgs* args) {
+  if (!args) return FALSE;
+
+  COREWEBVIEW2_PERMISSION_KIND type;
+
+  args->get_PermissionKind(&type);
+
+  return type;
+}
+
+DLL_EXPORTS(Webview_PermissionRequestArgs_GetState, int)
+(ICoreWebView2PermissionRequestedEventArgs* args) {
+  if (!args) return FALSE;
+
+  COREWEBVIEW2_PERMISSION_STATE state;
+
+  args->get_State(&state);
+
+  return state;
+}
+
+DLL_EXPORTS(Webview_PermissionRequestArgs_SetState, int)
+(ICoreWebView2PermissionRequestedEventArgs* args,
+ COREWEBVIEW2_PERMISSION_STATE state) {
+  if (!args) return FALSE;
+
+  return SUCCEEDED(args->put_State(state));
+}
+
+
+DLL_EXPORTS(Webview_PermissionRequestArgs_GetDeferral, BOOL)
+(ICoreWebView2PermissionRequestedEventArgs* args, LPVOID* ptr) {
+  if (!args) return FALSE;
+
+  ICoreWebView2Deferral* deferral = nullptr;
+
+  auto ret = SUCCEEDED(args->GetDeferral(&deferral));
+
+  *ptr = deferral;
+
+  return ret;
+}
+
+using PermissionRequestedCB = HRESULT(CALLBACK*)(LPVOID wv, BOOL userInitiated, LPVOID args, LPVOID param);
+DLL_EXPORTS(Webview_Attach_PermissionRequested, int64_t)
+(ICoreWebView2* webview, PermissionRequestedCB callback,
+ LPVOID param) {
+  if (!webview) return FALSE;
+
+  EventRegistrationToken token;
+
+  webview->add_PermissionRequested(
+      WRL::Callback<ICoreWebView2PermissionRequestedEventHandler>(
+          [callback, param](
+              ICoreWebView2* sender,
+              ICoreWebView2PermissionRequestedEventArgs* args)
+              -> HRESULT {
+            sender->AddRef();
+            args->AddRef();
+
+            BOOL ui = FALSE;
+            args->get_IsUserInitiated(&ui);
+
+            HRESULT hr = callback(sender, ui, args, param);
+
+            return hr;
+          })
+          .Get(),
+      &token);
+
+  return token.value;
+}
+
+DLL_EXPORTS(Webview_Detach_PermissionRequested, BOOL)
+(ICoreWebView2* webview, int64_t value) {
+  if (!webview) return FALSE;
+  EventRegistrationToken token = {value};
+
+  return SUCCEEDED(webview->remove_PermissionRequested(token));
+}
