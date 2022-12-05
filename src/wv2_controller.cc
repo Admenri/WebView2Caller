@@ -72,3 +72,108 @@ DLL_EXPORTS(Controller_SetZoomFactor, BOOL)
   auto ret = SUCCEEDED(controller->put_ZoomFactor(zoom));
   return ret;
 }
+
+DLL_EXPORTS(Controller_NotifyParentChanged, BOOL)
+(ICoreWebView2Controller* controller) {
+  if (!controller) return FALSE;
+
+  auto ret = SUCCEEDED(controller->NotifyParentWindowPositionChanged());
+  return ret;
+}
+
+DLL_EXPORTS(Controller_GetParent, BOOL)
+(ICoreWebView2Controller* controller, HWND* zoom) {
+  if (!controller) return FALSE;
+
+  auto ret = SUCCEEDED(controller->get_ParentWindow(zoom));
+  return ret;
+}
+
+DLL_EXPORTS(Controller_SetParent, BOOL)
+(ICoreWebView2Controller* controller, HWND zoom) {
+  if (!controller) return FALSE;
+
+  auto ret = SUCCEEDED(controller->put_ParentWindow(zoom));
+  return ret;
+}
+
+struct BGColor {
+  uint8_t a;
+  uint8_t r;
+  uint8_t g;
+  uint8_t b;
+};
+
+DLL_EXPORTS(Controller_GetBackgroundColor, BOOL)
+(ICoreWebView2Controller* controller, BGColor* cr) {
+  if (!controller) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2Controller2> con = nullptr;
+  controller->QueryInterface<ICoreWebView2Controller2>(&con);
+
+  auto ret = SUCCEEDED(con->get_DefaultBackgroundColor(
+      reinterpret_cast<COREWEBVIEW2_COLOR*>(cr)));
+  return ret;
+}
+
+DLL_EXPORTS(Controller_SetBackgroundColor, BOOL)
+(ICoreWebView2Controller* controller, BGColor* cr) {
+  if (!controller) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2Controller2> con = nullptr;
+  controller->QueryInterface<ICoreWebView2Controller2>(&con);
+
+  auto ret = SUCCEEDED(con->put_DefaultBackgroundColor(
+      *reinterpret_cast<COREWEBVIEW2_COLOR*>(cr)));
+  return ret;
+}
+
+using AcceleratorKeyPressedCB = BOOL(CALLBACK*)(LPVOID controller, COREWEBVIEW2_KEY_EVENT_KIND type,
+  uint32_t vkey, int32_t lparam, uint32_t repeat, uint32_t scancode, BOOL extendkey, BOOL menukeydown,
+  BOOL keydown, BOOL keyrelease, LPVOID param);
+DLL_EXPORTS(Controller_Attach_AcceleratorKeyPressed, int64_t)
+(ICoreWebView2Controller* controller, AcceleratorKeyPressedCB callback,
+ LPVOID param) {
+  if (!controller) return FALSE;
+
+  EventRegistrationToken token;
+
+  controller->add_AcceleratorKeyPressed(
+      WRL::Callback<ICoreWebView2AcceleratorKeyPressedEventHandler>(
+          [callback, param](
+              ICoreWebView2Controller* sender,
+              ICoreWebView2AcceleratorKeyPressedEventArgs* args) -> HRESULT {
+            sender->AddRef();
+
+            COREWEBVIEW2_KEY_EVENT_KIND sType;
+            uint32_t sVkey = 0;
+            int32_t sLparam = 0;
+            COREWEBVIEW2_PHYSICAL_KEY_STATUS sStatus;
+
+            args->get_KeyEventKind(&sType);
+            args->get_VirtualKey(&sVkey);
+            args->get_KeyEventLParam(&sLparam);
+            args->get_PhysicalKeyStatus(&sStatus);
+
+            BOOL hr = callback(
+                sender, sType, sVkey, sLparam, sStatus.RepeatCount,
+                sStatus.ScanCode, sStatus.IsExtendedKey, sStatus.IsMenuKeyDown,
+                sStatus.WasKeyDown, sStatus.IsKeyReleased, param);
+
+            args->put_Handled(hr);
+
+            return S_OK;
+          })
+          .Get(),
+      &token);
+
+  return token.value;
+}
+
+DLL_EXPORTS(Controller_Detach_AcceleratorKeyPressed, BOOL)
+(ICoreWebView2Controller* controller, int64_t value) {
+  if (!controller) return FALSE;
+  EventRegistrationToken token = {value};
+
+  return SUCCEEDED(controller->remove_AcceleratorKeyPressed(token));
+}

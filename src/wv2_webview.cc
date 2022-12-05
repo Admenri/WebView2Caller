@@ -89,9 +89,15 @@ DLL_EXPORTS(Webview_ExecuteScript, BOOL)
       script, WRL::Callback<ICoreWebView2ExecuteScriptCompletedHandler>(
                   [callback, param](HRESULT errorCode,
                                     LPCWSTR resultObjectAsJson) -> HRESULT {
-                    return callback(errorCode, resultObjectAsJson,
-                                    lstrlenW(resultObjectAsJson) * 2 + 2,
-                                    param);
+                    uint32_t sizeTmp = lstrlenW(resultObjectAsJson) * 2 + 2;
+                    LPWSTR newStr =
+                        static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
+                    if (newStr) {
+                      newStr[sizeTmp - 1] = 0;
+                      lstrcpyW(newStr, resultObjectAsJson);
+                    }
+
+                    return callback(errorCode, newStr, sizeTmp, param);
                   })
                   .Get()));
 
@@ -151,6 +157,66 @@ DLL_EXPORTS(Webview_GetDocumentTitle, BOOL)
 
   *ptr = source;
   *size = lstrlenW(source) * 2 + 2;
+
+  return ret;
+}
+
+using CallDevtoolsProtocolsMethodCB = HRESULT(CALLBACK*)(LPVOID result, uint32_t size, LPVOID param);
+DLL_EXPORTS(Webview_CallDevtoolsProtocolsMethod, BOOL)
+(ICoreWebView2* webview, LPWSTR method, LPWSTR paramJSON,
+ CallDevtoolsProtocolsMethodCB callback, LPVOID param) {
+  if (!webview) return FALSE;
+
+  LPWSTR source = nullptr;
+  auto ret = SUCCEEDED(webview->CallDevToolsProtocolMethod(
+      method, paramJSON,
+      WRL::Callback<ICoreWebView2CallDevToolsProtocolMethodCompletedHandler>(
+          [callback, param](HRESULT errorCode,
+                            LPCWSTR returnObjectAsJson) -> HRESULT {
+            uint32_t sizeTmp = lstrlenW(returnObjectAsJson) * 2 + 2;
+            LPWSTR newStr = static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
+            if (newStr) {
+              newStr[sizeTmp - 1] = 0;
+              lstrcpyW(newStr, returnObjectAsJson);
+            }
+
+            return callback(newStr, sizeTmp, param);
+          })
+          .Get()));
+
+  return ret;
+}
+
+DLL_EXPORTS(Webview_CallDevtoolsProtocolsMethod_Sync, BOOL)
+(ICoreWebView2* webview, LPWSTR method, LPWSTR paramJSON, LPCVOID* ptr,
+ uint32_t* size) {
+  if (!webview) return FALSE;
+
+  Waitable* waiter = CreateWaitable(true);
+
+  auto ret = SUCCEEDED(webview->CallDevToolsProtocolMethod(
+      method, paramJSON,
+      WRL::Callback<ICoreWebView2CallDevToolsProtocolMethodCompletedHandler>(
+                  [waiter, ptr, size](HRESULT errorCode,
+                                      LPCWSTR resultObjectAsJson) -> HRESULT {
+                    uint32_t sizeTmp = lstrlenW(resultObjectAsJson) * 2 + 2;
+                    LPWSTR newStr =
+                        static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
+                    if (newStr) {
+                      newStr[sizeTmp - 1] = 0;
+                      lstrcpyW(newStr, resultObjectAsJson);
+
+                      *ptr = newStr;
+                      *size = sizeTmp;
+                    }
+
+                    ActiveWaitable(waiter);
+
+                    return S_OK;
+                  })
+                  .Get()));
+
+  WaitOfMsgLoop(waiter);
 
   return ret;
 }
