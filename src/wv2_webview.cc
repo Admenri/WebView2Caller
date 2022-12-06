@@ -826,6 +826,21 @@ DLL_EXPORTS(Webview_GetCookieManager, BOOL)
   return ret;
 }
 
+DLL_EXPORTS(Webview_GetEnvironment, BOOL)
+(ICoreWebView2* webview, LPVOID* ptr) {
+  if (!webview) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2_2> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_2>(&tmpWv);
+
+  ICoreWebView2Environment* env = nullptr;
+  auto ret = SUCCEEDED(tmpWv->get_Environment(&env));
+
+  *ptr = env;
+
+  return ret;
+}
+
 DLL_EXPORTS(Webview_OpenTaskManager, BOOL)
 (ICoreWebView2* webview) {
   if (!webview) return FALSE;
@@ -1293,4 +1308,152 @@ DLL_EXPORTS(Webview_Detach_WebResourceResponseReceived, BOOL)
   webview->QueryInterface<ICoreWebView2_2>(&tmpWv);
 
   return SUCCEEDED(tmpWv->remove_WebResourceResponseReceived(token));
+}
+
+
+DLL_EXPORTS(Webview_SetMute, BOOL)
+(ICoreWebView2* webview, BOOL mute) {
+  if (!webview) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2_8> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_8>(&tmpWv);
+
+  return SUCCEEDED(tmpWv->put_IsMuted(mute));
+}
+
+DLL_EXPORTS(Webview_GetMute, BOOL)
+(ICoreWebView2* webview) {
+  if (!webview) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2_8> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_8>(&tmpWv);
+
+  BOOL mute = FALSE;
+
+  tmpWv->get_IsMuted(&mute);
+
+  return mute;
+}
+
+
+DLL_EXPORTS(Webview_GetAudioPlaying, BOOL)
+(ICoreWebView2* webview) {
+  if (!webview) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2_8> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_8>(&tmpWv);
+
+  BOOL ret = FALSE;
+  tmpWv->get_IsDocumentPlayingAudio(&ret);
+
+  return ret;
+}
+
+using IsDocumentPlayingAudioChangedCB = HRESULT(CALLBACK*)(LPVOID webview, BOOL audiable, LPVOID param);
+DLL_EXPORTS(Webview_Attach_IsDocumentPlayingAudioChanged, int64_t)
+(ICoreWebView2* webview, IsDocumentPlayingAudioChangedCB callback,
+ LPVOID param) {
+  if (!webview) return FALSE;
+
+  EventRegistrationToken token;
+
+  WRL::ComPtr<ICoreWebView2_8> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_8>(&tmpWv);
+
+  tmpWv->add_IsDocumentPlayingAudioChanged(
+      WRL::Callback<ICoreWebView2IsDocumentPlayingAudioChangedEventHandler>(
+          [callback, param](ICoreWebView2* sender, IUnknown* args) -> HRESULT {
+            sender->AddRef();
+
+            WRL::ComPtr<ICoreWebView2_8> tmpWv_ = nullptr;
+            sender->QueryInterface<ICoreWebView2_8>(&tmpWv_);
+
+            BOOL audible = FALSE;
+            tmpWv_->get_IsDocumentPlayingAudio(&audible);
+
+            HRESULT hr = callback(sender, audible, param);
+
+            return hr;
+          })
+          .Get(),
+      &token);
+
+  return token.value;
+}
+
+DLL_EXPORTS(Webview_Detach_IsDocumentPlayingAudioChanged, BOOL)
+(ICoreWebView2* webview, int64_t value) {
+  if (!webview) return FALSE;
+  EventRegistrationToken token = {value};
+
+  WRL::ComPtr<ICoreWebView2_8> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_8>(&tmpWv);
+
+  return SUCCEEDED(tmpWv->remove_IsDocumentPlayingAudioChanged(token));
+}
+
+using PreloadScriptCB = HRESULT(CALLBACK*)(LPVOID ptr, uint32_t size, LPVOID param);
+DLL_EXPORTS(Webview_AddPreloadScript, BOOL)
+(ICoreWebView2* webview, LPWSTR script, PreloadScriptCB callback,
+ LPVOID param) {
+  if (!webview) return FALSE;
+
+  HRESULT hr = webview->AddScriptToExecuteOnDocumentCreated(
+      script,
+      WRL::Callback<
+          ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler>(
+          [callback, param](HRESULT errorCode, LPCWSTR id) -> HRESULT {
+            if (callback) {
+              uint32_t sizeTmp = lstrlenW(id) * 2 + 2;
+              LPWSTR newStr = static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
+              if (newStr) {
+                newStr[sizeTmp - 1] = 0;
+                lstrcpyW(newStr, id);
+              }
+              return callback(newStr, sizeTmp, param);
+            }
+            return S_OK;
+          })
+          .Get());
+
+  return SUCCEEDED(hr);
+}
+
+DLL_EXPORTS(Webview_AddPreloadScript_Sync, BOOL)
+(ICoreWebView2* webview, LPWSTR script, LPVOID* ptr, uint32_t* size) {
+  if (!webview) return FALSE;
+
+  Waitable* waiter = CreateWaitable(true);
+
+  HRESULT hr = webview->AddScriptToExecuteOnDocumentCreated(
+      script,
+      WRL::Callback<
+          ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler>(
+          [waiter, ptr, size](HRESULT errorCode, LPCWSTR id) -> HRESULT {
+            uint32_t sizeTmp = lstrlenW(id) * 2 + 2;
+            LPWSTR newStr = static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
+            if (newStr) {
+              newStr[sizeTmp - 1] = 0;
+              lstrcpyW(newStr, id);
+            }
+
+            *ptr = newStr;
+            *size = sizeTmp;
+
+            ActiveWaitable(waiter);
+
+            return S_OK;
+          })
+          .Get());
+
+  WaitOfMsgLoop(waiter);
+
+  return SUCCEEDED(hr);
+}
+
+DLL_EXPORTS(Webview_RemovePreloadScript, BOOL)
+(ICoreWebView2* webview, LPWSTR id) {
+  if (!webview) return FALSE;
+
+  return SUCCEEDED(webview->RemoveScriptToExecuteOnDocumentCreated(id));
 }

@@ -119,7 +119,7 @@ using CreateControllerCB = HRESULT(CALLBACK*)(LPVOID controller, LPVOID param);
 DLL_EXPORTS(Env_CreateController, BOOL)
 (ICoreWebView2Environment* env, HWND hwnd, RECT* lpRect, CreateControllerCB callback, LPVOID param) {
   if (!env) return FALSE;
-  
+
   HRESULT hr = env->CreateCoreWebView2Controller(
       hwnd,
       WRL::Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
