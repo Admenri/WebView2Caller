@@ -1249,3 +1249,48 @@ DLL_EXPORTS(Webview_Detach_WebResourceRequested, BOOL)
 
   return SUCCEEDED(webview->remove_WebResourceRequested(token));
 }
+
+
+using WebResourceResponseReceivedCB = HRESULT(CALLBACK*)(LPVOID wv, LPVOID request, LPVOID response,
+                                                  LPVOID param);
+DLL_EXPORTS(Webview_Attach_WebResourceResponseReceived, int64_t)
+(ICoreWebView2* webview, WebResourceResponseReceivedCB callback, LPVOID param) {
+  if (!webview) return FALSE;
+
+  EventRegistrationToken token;
+
+  WRL::ComPtr<ICoreWebView2_2> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_2>(&tmpWv);
+
+  tmpWv->add_WebResourceResponseReceived(
+      WRL::Callback<ICoreWebView2WebResourceResponseReceivedEventHandler>(
+          [callback, param](ICoreWebView2* sender,
+                            ICoreWebView2WebResourceResponseReceivedEventArgs*
+                                args) -> HRESULT {
+            sender->AddRef();
+
+            ICoreWebView2WebResourceRequest* request = nullptr;
+            ICoreWebView2WebResourceResponseView* response = nullptr;
+            args->get_Request(&request);
+            args->get_Response(&response);
+
+            HRESULT hr = callback(sender, request, response, param);
+
+            return hr;
+          })
+          .Get(),
+      &token);
+
+  return token.value;
+}
+
+DLL_EXPORTS(Webview_Detach_WebResourceResponseReceived, BOOL)
+(ICoreWebView2* webview, int64_t value) {
+  if (!webview) return FALSE;
+  EventRegistrationToken token = {value};
+
+  WRL::ComPtr<ICoreWebView2_2> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_2>(&tmpWv);
+
+  return SUCCEEDED(tmpWv->remove_WebResourceResponseReceived(token));
+}

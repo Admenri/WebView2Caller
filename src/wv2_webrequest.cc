@@ -183,7 +183,7 @@ DLL_EXPORTS(ResourceResponse_SetReasonPhrase, BOOL)
   return SUCCEEDED(obj->put_ReasonPhrase(uri));
 }
 
-DLL_EXPORTS(ResourceResponse_GetStatusCode, BOOL)
+DLL_EXPORTS(ResourceResponse_GetStatusCode, int)
 (ICoreWebView2WebResourceResponse* obj) {
   if (!obj) return FALSE;
 
@@ -472,3 +472,118 @@ DLL_EXPORTS(Webview_HTTPResponseHeader_GetHeaders, BOOL)
 
   return ret;
 }
+
+
+
+DLL_EXPORTS(ResourceResponseView_GetReasonPhrase, BOOL)
+(ICoreWebView2WebResourceResponseView* obj, LPVOID* ptr, uint32_t* size) {
+  if (!obj) return FALSE;
+
+  LPWSTR value = nullptr;
+
+  auto ret = SUCCEEDED(obj->get_ReasonPhrase(&value));
+
+  *ptr = value;
+  *size = lstrlenW(value) * 2 + 2;
+
+  return ret;
+}
+
+DLL_EXPORTS(ResourceResponseView_GetStatusCode, int)
+(ICoreWebView2WebResourceResponseView* obj) {
+  if (!obj) return FALSE;
+
+  int code = 0;
+  obj->get_StatusCode(&code);
+
+  return code;
+}
+
+using ResourceResponseViewGetDataCB = HRESULT(CALLBACK*)(LPVOID ptr, uint32_t size, LPVOID param);
+DLL_EXPORTS(ResourceResponseView_GetData, BOOL)
+(ICoreWebView2WebResourceResponseView* obj,
+ ResourceResponseViewGetDataCB callback, LPVOID param) {
+  if (!obj) return FALSE;
+
+  auto ret = SUCCEEDED(obj->GetContent(
+      WRL::Callback<
+          ICoreWebView2WebResourceResponseViewGetContentCompletedHandler>(
+          [callback, param](HRESULT errorCode, IStream* content) -> HRESULT {
+            if (content) {
+              STATSTG stat;
+              content->Stat(&stat, STATFLAG_NONAME);
+
+              LARGE_INTEGER linfo;
+              linfo.QuadPart = 0;
+              content->Seek(linfo, STREAM_SEEK_SET, NULL);
+
+              uint32_t size = stat.cbSize.LowPart;
+              uint8_t* buf = static_cast<uint8_t*>(wv2_Utility_Malloc(size));
+              ULONG dummy = 0;
+              content->Read(buf, size, &dummy);
+
+              return callback(buf, size, param);
+            }
+            return callback(nullptr, 0, param);
+          })
+          .Get()));
+
+  return ret;
+}
+
+DLL_EXPORTS(ResourceResponseView_GetData_Sync, BOOL)
+(ICoreWebView2WebResourceResponseView* obj, LPVOID* pptr, uint32_t* psize) {
+  if (!obj) return FALSE;
+
+  Waitable* waiter = CreateWaitable(true);
+
+  WRL::ComPtr<IStream> is = nullptr;
+  auto ret = SUCCEEDED(obj->GetContent(
+      WRL::Callback<
+          ICoreWebView2WebResourceResponseViewGetContentCompletedHandler>(
+          [waiter, &is](HRESULT errorCode, IStream* content) -> HRESULT {
+            if (content) {
+              content->AddRef();
+              is = content;
+            }
+            ActiveWaitable(waiter);
+            return S_OK;
+          })
+          .Get()));
+
+  WaitOfMsgLoop(waiter);
+
+  if (is) return FALSE;
+
+  STATSTG stat;
+  is->Stat(&stat, STATFLAG_NONAME);
+
+  LARGE_INTEGER linfo;
+  linfo.QuadPart = 0;
+  is->Seek(linfo, STREAM_SEEK_SET, NULL);
+
+  uint32_t size = stat.cbSize.LowPart;
+  uint8_t* buf = static_cast<uint8_t*>(wv2_Utility_Malloc(size));
+  ULONG dummy = 0;
+  is->Read(buf, size, &dummy);
+
+  *pptr = buf;
+  *psize = size;
+
+  return ret;
+}
+
+DLL_EXPORTS(ResourceResponseView_GetHeaders, BOOL)
+(ICoreWebView2WebResourceResponseView* obj, LPVOID* ptr) {
+  if (!obj) return FALSE;
+
+  ICoreWebView2HttpResponseHeaders* header;
+  auto ret = SUCCEEDED(obj->get_Headers(&header));
+
+  *ptr = header;
+
+  return ret;
+}
+
+
+

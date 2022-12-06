@@ -75,11 +75,15 @@ void WaitOfMsgLoop(Waitable* obj) {
   if (!obj) return;
   if (obj->isActive) return;
 
-  auto hwnd = FindWindowEx(HWND_MESSAGE, NULL, L"Chrome_MessageWindow", NULL);
+  // WebView2 Pump Received Host
+  // FindWindowEx(HWND_MESSAGE, NULL, L"Chrome_MessageWindow", NULL);
+
+  // WebView2 MessageLoop MSG ID:
+  // WM_USER + 1
 
   MSG uiMsg;
   while (!obj->isActive) {
-    if (PeekMessage(&uiMsg, hwnd, 0, 0, PM_REMOVE)) {
+    if (PeekMessage(&uiMsg, NULL, WM_USER + 1, WM_USER + 1, PM_REMOVE)) {
       TranslateMessage(&uiMsg);
       DispatchMessage(&uiMsg);
       if (uiMsg.message == WM_QUIT) {
