@@ -31,6 +31,9 @@
     <ClCompile Include="..\src\wv2_cookie.cc">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\wv2_webrequest.cc">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\wv2_env.h">
@@ -52,6 +55,9 @@
       <Filter>res</Filter>
     </ClInclude>
     <ClInclude Include="..\src\wv2_cookie.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\wv2_webrequest.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>

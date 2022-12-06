@@ -89,15 +89,18 @@ DLL_EXPORTS(Webview_ExecuteScript, BOOL)
       script, WRL::Callback<ICoreWebView2ExecuteScriptCompletedHandler>(
                   [callback, param](HRESULT errorCode,
                                     LPCWSTR resultObjectAsJson) -> HRESULT {
-                    uint32_t sizeTmp = lstrlenW(resultObjectAsJson) * 2 + 2;
-                    LPWSTR newStr =
-                        static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
-                    if (newStr) {
-                      newStr[sizeTmp - 1] = 0;
-                      lstrcpyW(newStr, resultObjectAsJson);
-                    }
+                    if (callback) {
+                      uint32_t sizeTmp = lstrlenW(resultObjectAsJson) * 2 + 2;
+                      LPWSTR newStr =
+                          static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
+                      if (newStr) {
+                        newStr[sizeTmp - 1] = 0;
+                        lstrcpyW(newStr, resultObjectAsJson);
+                      }
 
-                    return callback(errorCode, newStr, sizeTmp, param);
+                      return callback(errorCode, newStr, sizeTmp, param);
+                    } else
+                      return S_OK;
                   })
                   .Get()));
 
@@ -173,14 +176,17 @@ DLL_EXPORTS(Webview_CallDevtoolsProtocolsMethod, BOOL)
       WRL::Callback<ICoreWebView2CallDevToolsProtocolMethodCompletedHandler>(
           [callback, param](HRESULT errorCode,
                             LPCWSTR returnObjectAsJson) -> HRESULT {
-            uint32_t sizeTmp = lstrlenW(returnObjectAsJson) * 2 + 2;
-            LPWSTR newStr = static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
-            if (newStr) {
-              newStr[sizeTmp - 1] = 0;
-              lstrcpyW(newStr, returnObjectAsJson);
-            }
+            if (callback) {
+              uint32_t sizeTmp = lstrlenW(returnObjectAsJson) * 2 + 2;
+              LPWSTR newStr = static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
+              if (newStr) {
+                newStr[sizeTmp - 1] = 0;
+                lstrcpyW(newStr, returnObjectAsJson);
+              }
 
-            return callback(newStr, sizeTmp, param);
+              return callback(newStr, sizeTmp, param);
+            } else
+              return S_OK;
           })
           .Get()));
 
@@ -250,13 +256,13 @@ DLL_EXPORTS(Webview_CapturePreview, BOOL)
             is->Seek(linfo, STREAM_SEEK_SET, NULL);
 
             uint32_t size = stat.cbSize.LowPart;
-            uint8_t* buf = new uint8_t[size];
+            uint8_t* buf = static_cast<uint8_t*>(wv2_Utility_Malloc(size));
             ULONG dummy = 0;
             is->Read(buf, size, &dummy);
 
             HRESULT hr = callback(buf, size, param);
 
-            delete[] buf;
+            wv2_Utility_Mfree(buf);
 
             is->Release();
             return hr;
@@ -542,113 +548,6 @@ DLL_EXPORTS(Webview_NavigationStartingEventArgs_GetURL, BOOL)
 
   *ptr = url;
   *size = lstrlenW(url) * 2 + 2;
-  return ret;
-}
-
-
-DLL_EXPORTS(Webview_HTTPRequestHeader_GetHeader, BOOL)
-(ICoreWebView2HttpRequestHeaders* header, LPWSTR name, LPVOID* ptr,
- uint32_t* size) {
-  if (!header) return FALSE;
-
-  LPWSTR value = nullptr;
-  auto ret = SUCCEEDED(header->GetHeader(name, &value));
-
-  *ptr = value;
-  *size = lstrlenW(value) * 2 + 2;
-
-  return ret;
-}
-
-DLL_EXPORTS(Webview_HTTPRequestHeader_Contains, BOOL)
-(ICoreWebView2HttpRequestHeaders* header, LPWSTR name) {
-  if (!header) return FALSE;
-
-  BOOL ret = FALSE;
-  header->Contains(name, &ret);
-
-  return ret;
-}
-
-DLL_EXPORTS(Webview_HTTPRequestHeader_SetHeader, BOOL)
-(ICoreWebView2HttpRequestHeaders* header, LPWSTR name, LPWSTR value) {
-  if (!header) return FALSE;
-
-  return SUCCEEDED(header->SetHeader(name, value));
-}
-
-DLL_EXPORTS(Webview_HTTPRequestHeader_RemoveHeader, BOOL)
-(ICoreWebView2HttpRequestHeaders* header, LPWSTR name) {
-  if (!header) return FALSE;
-
-  return SUCCEEDED(header->RemoveHeader(name));
-}
-
-DLL_EXPORTS(Webview_HTTPRequestHeader_GetRawData, BOOL)
-(ICoreWebView2HttpRequestHeaders* header, LPVOID* arrayPtr, uint32_t* size) {
-  if (!header) return FALSE;
-
-  ICoreWebView2HttpHeadersCollectionIterator* iter = nullptr;
-  auto ret = SUCCEEDED(header->GetIterator(&iter));
-  if (!iter) return FALSE;
-
-  std::vector<std::pair<LPWSTR, LPWSTR>> data;
-
-  *size = 0;
-  BOOL hasData = FALSE;
-  while (SUCCEEDED(iter->get_HasCurrentHeader(&hasData)) && hasData) {
-    ++(*size);
-
-    std::pair<LPWSTR ,LPWSTR> pair;
-    iter->GetCurrentHeader(&pair.first, &pair.second);
-    data.push_back(std::move(pair));
-
-    iter->MoveNext(&hasData);
-  }
-
-  LPSTR buf = static_cast<LPSTR>(wv2_Utility_Malloc((*size) * 2 * sizeof(void*)));
-  for (size_t i = 0; i < data.size(); i++) {
-    memcpy(buf + i * 2 * sizeof(void*), &data[i].first, sizeof(void*));
-    memcpy(buf + i * 2 * sizeof(void*) + sizeof(void*), &data[i].second, sizeof(void*));
-  }
-
-  *arrayPtr = buf;
-
-  return ret;
-}
-
-DLL_EXPORTS(Webview_HTTPRequestHeader_GetHeaders, BOOL)
-(ICoreWebView2HttpRequestHeaders* header, LPWSTR name, LPVOID* arrayPtr, uint32_t* size) {
-  if (!header) return FALSE;
-
-  ICoreWebView2HttpHeadersCollectionIterator* iter = nullptr;
-  auto ret = SUCCEEDED(header->GetHeaders(name, &iter));
-  if (!iter) return FALSE;
-
-  std::vector<std::pair<LPWSTR, LPWSTR>> data;
-
-  *size = 0;
-  BOOL hasData = FALSE;
-  while (SUCCEEDED(iter->get_HasCurrentHeader(&hasData)) && hasData) {
-    ++(*size);
-
-    std::pair<LPWSTR, LPWSTR> pair;
-    iter->GetCurrentHeader(&pair.first, &pair.second);
-    data.push_back(std::move(pair));
-
-    iter->MoveNext(&hasData);
-  }
-
-  LPSTR buf =
-      static_cast<LPSTR>(wv2_Utility_Malloc((*size) * 2 * sizeof(void*)));
-  for (size_t i = 0; i < data.size(); i++) {
-    memcpy(buf + i * 2 * sizeof(void*), &data[i].first, sizeof(void*));
-    memcpy(buf + i * 2 * sizeof(void*) + sizeof(void*), &data[i].second,
-           sizeof(void*));
-  }
-
-  *arrayPtr = buf;
-
   return ret;
 }
 
@@ -1302,4 +1201,51 @@ DLL_EXPORTS(Profile_ClearAllBrowsingData_Sync, BOOL)
   WaitOfMsgLoop(waiter);
 
   return ret;
+}
+
+DLL_EXPORTS(Webview_AddWebResourceRequestedFilter, BOOL)
+(ICoreWebView2* webview, LPWSTR uri, COREWEBVIEW2_WEB_RESOURCE_CONTEXT type) {
+  if (!webview) return FALSE;
+
+  return SUCCEEDED(webview->AddWebResourceRequestedFilter(uri, type));
+}
+
+DLL_EXPORTS(Webview_RemoveWebResourceRequestedFilter, BOOL)
+(ICoreWebView2* webview, LPWSTR uri, COREWEBVIEW2_WEB_RESOURCE_CONTEXT type) {
+  if (!webview) return FALSE;
+
+  return SUCCEEDED(webview->RemoveWebResourceRequestedFilter(uri, type));
+}
+
+using WebResourceRequestedCB = HRESULT(CALLBACK*)(LPVOID wv, LPVOID args, LPVOID param);
+DLL_EXPORTS(Webview_Attach_WebResourceRequested, int64_t)
+(ICoreWebView2* webview, WebResourceRequestedCB callback, LPVOID param) {
+  if (!webview) return FALSE;
+
+  EventRegistrationToken token;
+
+  webview->add_WebResourceRequested(
+      WRL::Callback<ICoreWebView2WebResourceRequestedEventHandler>(
+          [callback, param](
+              ICoreWebView2* sender,
+              ICoreWebView2WebResourceRequestedEventArgs* args) -> HRESULT {
+            sender->AddRef();
+            args->AddRef();
+
+            HRESULT hr = callback(sender, args, param);
+
+            return hr;
+          })
+          .Get(),
+      &token);
+
+  return token.value;
+}
+
+DLL_EXPORTS(Webview_Detach_WebResourceRequested, BOOL)
+(ICoreWebView2* webview, int64_t value) {
+  if (!webview) return FALSE;
+  EventRegistrationToken token = {value};
+
+  return SUCCEEDED(webview->remove_WebResourceRequested(token));
 }

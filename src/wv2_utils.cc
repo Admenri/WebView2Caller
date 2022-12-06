@@ -75,9 +75,11 @@ void WaitOfMsgLoop(Waitable* obj) {
   if (!obj) return;
   if (obj->isActive) return;
 
+  auto hwnd = FindWindowEx(HWND_MESSAGE, NULL, L"Chrome_MessageWindow", NULL);
+
   MSG uiMsg;
   while (!obj->isActive) {
-    if (PeekMessage(&uiMsg, NULL, 0, 0, PM_REMOVE)) {
+    if (PeekMessage(&uiMsg, hwnd, 0, 0, PM_REMOVE)) {
       TranslateMessage(&uiMsg);
       DispatchMessage(&uiMsg);
       if (uiMsg.message == WM_QUIT) {
@@ -95,29 +97,3 @@ DLL_EXPORTS(Utility_Malloc, void*)(uint32_t size) {
 }
 
 DLL_EXPORTS(Utility_Mfree, void)(void* mem) { LocalFree(mem); }
-
-namespace conv {
-
-LPWSTR ToUnicode(const char* str) {
-  size_t length = lstrlenA(str);
-  if (!str || length <= 0) return NULL;
-  size_t bLength = MultiByteToWideChar(CP_ACP, NULL, str, length, NULL, NULL);
-  wchar_t* buf =
-      (wchar_t*)wv2_Utility_Malloc(bLength * sizeof(wchar_t) + sizeof(wchar_t));
-  MultiByteToWideChar(CP_ACP, NULL, str, length, buf, bLength);
-  buf[bLength] = 0;
-  return buf;
-}
-
-LPSTR ToAnsi(const wchar_t* str) {
-  size_t length = lstrlenW(str);
-  if (!str || length <= 0) return NULL;
-  size_t bLength =
-      WideCharToMultiByte(CP_ACP, NULL, str, length, NULL, NULL, NULL, NULL);
-  char* buf = (char*)wv2_Utility_Malloc(bLength * sizeof(char*) + sizeof(char));
-  WideCharToMultiByte(CP_ACP, NULL, str, length, buf, bLength, NULL, NULL);
-  buf[bLength] = 0;
-  return buf;
-}
-
-}  // namespace conv

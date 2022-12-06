@@ -249,3 +249,27 @@ DLL_EXPORTS(Env_CreateController_Options_Sync, BOOL)
 
   return SUCCEEDED(hr);
 }
+
+DLL_EXPORTS(Env_CreateWebResourceResponse, BOOL)
+(ICoreWebView2Environment* env, LPVOID pptr, uint32_t psize, int code, LPWSTR reason, LPWSTR headers, LPVOID* ret) {
+  if (!env) return FALSE;
+  Waitable* waiter = CreateWaitable(true);
+
+  WRL::ComPtr<IStream> is = nullptr;
+  HGLOBAL hMem = GlobalAlloc(GMEM_ZEROINIT, psize);
+  if (!hMem) return FALSE;
+
+  LPVOID pMem = GlobalLock(hMem);
+  if (!pMem) return FALSE;
+
+  RtlCopyMemory(pMem, pptr, psize);
+  GlobalUnlock(hMem);
+  CreateStreamOnHGlobal(hMem, TRUE, &is);
+
+  ICoreWebView2WebResourceResponse* retObj = nullptr;
+  HRESULT hr = env->CreateWebResourceResponse(is.Get(), code, reason, headers, &retObj);
+
+  *ret = retObj;
+
+  return SUCCEEDED(hr);
+}
