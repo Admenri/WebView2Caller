@@ -1090,3 +1090,216 @@ DLL_EXPORTS(Webview_SetDefaultDownloadDialogMargin, BOOL)
 
   return SUCCEEDED(tmpWv->put_DefaultDownloadDialogMargin(*pt));
 }
+
+
+DLL_EXPORTS(Webview_GetProfile, BOOL)
+(ICoreWebView2* webview, LPVOID* ptr) {
+  if (!webview) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2_13> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_13>(&tmpWv);
+
+  ICoreWebView2Profile* profile = nullptr;
+
+  auto ret = SUCCEEDED(tmpWv->get_Profile(&profile));
+
+  *ptr = profile;
+
+  return ret;
+}
+
+DLL_EXPORTS(Profile_GetName, BOOL)
+(ICoreWebView2Profile* profile, LPVOID* ptr, uint32_t* size) {
+  if (!profile) return FALSE;
+
+  LPWSTR value = nullptr;
+  auto ret = SUCCEEDED(profile->get_ProfileName(&value));
+
+  *ptr = value;
+  *size = lstrlenW(value) * 2 + 2;
+
+  return ret;
+}
+
+DLL_EXPORTS(Profile_GetPrivateInMode, BOOL)
+(ICoreWebView2Profile* profile) {
+  if (!profile) return FALSE;
+
+  BOOL value = FALSE;
+  profile->get_IsInPrivateModeEnabled(&value);
+
+  return value;
+}
+
+DLL_EXPORTS(Profile_GetPath, BOOL)
+(ICoreWebView2Profile* profile, LPVOID* ptr, uint32_t* size) {
+  if (!profile) return FALSE;
+
+  LPWSTR value = nullptr;
+  auto ret = SUCCEEDED(profile->get_ProfilePath(&value));
+
+  *ptr = value;
+  *size = lstrlenW(value) * 2 + 2;
+
+  return ret;
+}
+
+DLL_EXPORTS(Profile_GetDefaultDownloadPath, BOOL)
+(ICoreWebView2Profile* profile, LPVOID* ptr, uint32_t* size) {
+  if (!profile) return FALSE;
+
+  LPWSTR value = nullptr;
+  auto ret = SUCCEEDED(profile->get_DefaultDownloadFolderPath(&value));
+
+  *ptr = value;
+  *size = lstrlenW(value) * 2 + 2;
+
+  return ret;
+}
+
+DLL_EXPORTS(Profile_SetDefaultDownloadPath, BOOL)
+(ICoreWebView2Profile* profile, LPWSTR path) {
+  if (!profile) return FALSE;
+
+  return SUCCEEDED(profile->put_DefaultDownloadFolderPath(path));
+}
+
+DLL_EXPORTS(Profile_GetColorTheme, int)
+(ICoreWebView2Profile* profile) {
+  if (!profile) return FALSE;
+
+  COREWEBVIEW2_PREFERRED_COLOR_SCHEME value;
+  profile->get_PreferredColorScheme(&value);
+
+  return value;
+}
+
+DLL_EXPORTS(Profile_SetColorTheme, BOOL)
+(ICoreWebView2Profile* profile, COREWEBVIEW2_PREFERRED_COLOR_SCHEME value) {
+  if (!profile) return FALSE;
+
+  return SUCCEEDED(profile->put_PreferredColorScheme(value));
+}
+
+using ClearBrowsingDataCB = HRESULT(CALLBACK*)(HRESULT code, LPVOID param);
+DLL_EXPORTS(Profile_ClearBrowsingData, BOOL)
+(ICoreWebView2Profile* profile, COREWEBVIEW2_BROWSING_DATA_KINDS type,
+ ClearBrowsingDataCB callback, LPVOID param) {
+  if (!profile) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2Profile2> tmpPf = nullptr;
+  profile->QueryInterface<ICoreWebView2Profile2>(&tmpPf);
+
+  auto ret = SUCCEEDED(tmpPf->ClearBrowsingData(
+      type, WRL::Callback<ICoreWebView2ClearBrowsingDataCompletedHandler>(
+                [callback, param](HRESULT errorCode) -> HRESULT {
+                  return callback(errorCode, param);
+                })
+                .Get()));
+
+  return ret;
+}
+
+DLL_EXPORTS(Profile_ClearBrowsingData_Sync, BOOL)
+(ICoreWebView2Profile* profile, COREWEBVIEW2_BROWSING_DATA_KINDS type) {
+  if (!profile) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2Profile2> tmpPf = nullptr;
+  profile->QueryInterface<ICoreWebView2Profile2>(&tmpPf);
+
+  Waitable* waiter = CreateWaitable(true);
+
+  auto ret = SUCCEEDED(tmpPf->ClearBrowsingData(
+      type, WRL::Callback<ICoreWebView2ClearBrowsingDataCompletedHandler>(
+                [waiter](HRESULT errorCode) -> HRESULT {
+                  ActiveWaitable(waiter);
+                  return S_OK;
+                })
+                .Get()));
+
+  WaitOfMsgLoop(waiter);
+
+  return ret;
+}
+
+DLL_EXPORTS(Profile_ClearBrowsingDataInTimeRange, BOOL)
+(ICoreWebView2Profile* profile, COREWEBVIEW2_BROWSING_DATA_KINDS type,
+ double start, double end, ClearBrowsingDataCB callback, LPVOID param) {
+  if (!profile) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2Profile2> tmpPf = nullptr;
+  profile->QueryInterface<ICoreWebView2Profile2>(&tmpPf);
+
+  auto ret = SUCCEEDED(tmpPf->ClearBrowsingDataInTimeRange(
+      type, start, end,
+      WRL::Callback<ICoreWebView2ClearBrowsingDataCompletedHandler>(
+          [callback, param](HRESULT errorCode) -> HRESULT {
+            return callback(errorCode, param);
+          })
+          .Get()));
+
+  return ret;
+}
+
+DLL_EXPORTS(Profile_ClearBrowsingDataInTimeRange_Sync, BOOL)
+(ICoreWebView2Profile* profile, COREWEBVIEW2_BROWSING_DATA_KINDS type,
+ double start, double end) {
+  if (!profile) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2Profile2> tmpPf = nullptr;
+  profile->QueryInterface<ICoreWebView2Profile2>(&tmpPf);
+
+  Waitable* waiter = CreateWaitable(true);
+
+  auto ret = SUCCEEDED(tmpPf->ClearBrowsingDataInTimeRange(
+      type, start, end,
+      WRL::Callback<ICoreWebView2ClearBrowsingDataCompletedHandler>(
+          [waiter](HRESULT errorCode) -> HRESULT {
+            ActiveWaitable(waiter);
+            return S_OK;
+          })
+          .Get()));
+
+  WaitOfMsgLoop(waiter);
+
+  return ret;
+}
+
+DLL_EXPORTS(Profile_ClearAllBrowsingData, BOOL)
+(ICoreWebView2Profile* profile, ClearBrowsingDataCB callback, LPVOID param) {
+  if (!profile) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2Profile2> tmpPf = nullptr;
+  profile->QueryInterface<ICoreWebView2Profile2>(&tmpPf);
+
+  auto ret = SUCCEEDED(tmpPf->ClearBrowsingDataAll(
+      WRL::Callback<ICoreWebView2ClearBrowsingDataCompletedHandler>(
+          [callback, param](HRESULT errorCode) -> HRESULT {
+            return callback(errorCode, param);
+          })
+          .Get()));
+
+  return ret;
+}
+
+DLL_EXPORTS(Profile_ClearAllBrowsingData_Sync, BOOL)
+(ICoreWebView2Profile* profile) {
+  if (!profile) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2Profile2> tmpPf = nullptr;
+  profile->QueryInterface<ICoreWebView2Profile2>(&tmpPf);
+
+  Waitable* waiter = CreateWaitable(true);
+
+  auto ret = SUCCEEDED(tmpPf->ClearBrowsingDataAll(
+      WRL::Callback<ICoreWebView2ClearBrowsingDataCompletedHandler>(
+          [waiter](HRESULT errorCode) -> HRESULT {
+            ActiveWaitable(waiter);
+            return S_OK;
+          })
+          .Get()));
+
+  WaitOfMsgLoop(waiter);
+
+  return ret;
+}
