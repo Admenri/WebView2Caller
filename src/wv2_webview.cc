@@ -1457,3 +1457,138 @@ DLL_EXPORTS(Webview_RemovePreloadScript, BOOL)
 
   return SUCCEEDED(webview->RemoveScriptToExecuteOnDocumentCreated(id));
 }
+
+DLL_EXPORTS(Webview_PostWebMessageAsString, BOOL)
+(ICoreWebView2* webview, LPWSTR str) {
+  if (!webview) return FALSE;
+
+  return SUCCEEDED(webview->PostWebMessageAsString(str));
+}
+
+DLL_EXPORTS(Webview_PostWebMessageAsJSON, BOOL)
+(ICoreWebView2* webview, LPWSTR str) {
+  if (!webview) return FALSE;
+
+  return SUCCEEDED(webview->PostWebMessageAsJson(str));
+}
+
+using ScriptDialogOpeningCB = HRESULT(CALLBACK*)(LPVOID webview, LPVOID args, LPVOID param);
+DLL_EXPORTS(Webview_Attach_ScriptDialogOpening, int64_t)
+(ICoreWebView2* webview, ScriptDialogOpeningCB callback, LPVOID param) {
+  if (!webview) return FALSE;
+
+  EventRegistrationToken token;
+
+  webview->add_ScriptDialogOpening(
+      WRL::Callback<ICoreWebView2ScriptDialogOpeningEventHandler>(
+          [callback, param](
+              ICoreWebView2* sender,
+              ICoreWebView2ScriptDialogOpeningEventArgs* args) -> HRESULT {
+            sender->AddRef();
+            args->AddRef();
+
+            HRESULT hr = callback(sender, args, param);
+
+            return hr;
+          })
+          .Get(),
+      &token);
+
+  return token.value;
+}
+
+DLL_EXPORTS(Webview_Detach_ScriptDialogOpening, BOOL)
+(ICoreWebView2* webview, int64_t value) {
+  if (!webview) return FALSE;
+  EventRegistrationToken token = {value};
+
+  return SUCCEEDED(webview->remove_ScriptDialogOpening(token));
+}
+
+DLL_EXPORTS(Webview_ScriptDialogOpeningArgs_GetURL, BOOL)
+(ICoreWebView2ScriptDialogOpeningEventArgs* args, LPVOID* ptr, uint32_t* size) {
+  if (!args) return FALSE;
+
+  LPWSTR uri = nullptr;
+  HRESULT hr = args->get_Uri(&uri);
+
+  *ptr = uri;
+  *size = lstrlenW(uri) * 2 + 2;
+
+  return SUCCEEDED(hr);
+}
+
+DLL_EXPORTS(Webview_ScriptDialogOpeningArgs_GetMessage, BOOL)
+(ICoreWebView2ScriptDialogOpeningEventArgs* args, LPVOID* ptr, uint32_t* size) {
+  if (!args) return FALSE;
+
+  LPWSTR uri = nullptr;
+  HRESULT hr = args->get_Message(&uri);
+
+  *ptr = uri;
+  *size = lstrlenW(uri) * 2 + 2;
+
+  return SUCCEEDED(hr);
+}
+
+DLL_EXPORTS(Webview_ScriptDialogOpeningArgs_GetDefaultText, BOOL)
+(ICoreWebView2ScriptDialogOpeningEventArgs* args, LPVOID* ptr, uint32_t* size) {
+  if (!args) return FALSE;
+
+  LPWSTR uri = nullptr;
+  HRESULT hr = args->get_DefaultText(&uri);
+
+  *ptr = uri;
+  *size = lstrlenW(uri) * 2 + 2;
+
+  return SUCCEEDED(hr);
+}
+
+DLL_EXPORTS(Webview_ScriptDialogOpeningArgs_GetResultText, BOOL)
+(ICoreWebView2ScriptDialogOpeningEventArgs* args, LPVOID* ptr, uint32_t* size) {
+  if (!args) return FALSE;
+
+  LPWSTR uri = nullptr;
+  HRESULT hr = args->get_ResultText(&uri);
+
+  *ptr = uri;
+  *size = lstrlenW(uri) * 2 + 2;
+
+  return SUCCEEDED(hr);
+}
+
+DLL_EXPORTS(Webview_ScriptDialogOpeningArgs_GetType, int)
+(ICoreWebView2ScriptDialogOpeningEventArgs* args) {
+  if (!args) return FALSE;
+
+  COREWEBVIEW2_SCRIPT_DIALOG_KIND type;
+  args->get_Kind(&type);
+
+  return type;
+}
+
+DLL_EXPORTS(Webview_ScriptDialogOpeningArgs_Accept, BOOL)
+(ICoreWebView2ScriptDialogOpeningEventArgs* args) {
+  if (!args) return FALSE;
+
+  return SUCCEEDED(args->Accept());
+}
+
+DLL_EXPORTS(Webview_ScriptDialogOpeningArgs_SetResultText, BOOL)
+(ICoreWebView2ScriptDialogOpeningEventArgs* args, LPWSTR text) {
+  if (!args) return FALSE;
+
+  return SUCCEEDED(args->put_ResultText(text));
+}
+
+DLL_EXPORTS(Webview_ScriptDialogOpeningArgs_GetDeferral, BOOL)
+(ICoreWebView2ScriptDialogOpeningEventArgs* args, LPVOID* ptr) {
+  if (!args) return FALSE;
+
+  ICoreWebView2Deferral* deferral = nullptr;
+  HRESULT hr = args->GetDeferral(&deferral);
+
+  *ptr = deferral;
+
+  return SUCCEEDED(hr);
+}
