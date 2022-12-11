@@ -165,6 +165,7 @@
     <ClCompile Include="..\src\wv2_controller.cc" />
     <ClCompile Include="..\src\wv2_cookie.cc" />
     <ClCompile Include="..\src\wv2_env.cc" />
+    <ClCompile Include="..\src\wv2_frame.cc" />
     <ClCompile Include="..\src\wv2_webrequest.cc" />
     <ClCompile Include="..\src\wv2_webview.cc" />
     <ClCompile Include="..\src\wv2_utils.cc" />
@@ -178,6 +179,7 @@
     <ClInclude Include="..\src\wv2_controller.h" />
     <ClInclude Include="..\src\wv2_cookie.h" />
     <ClInclude Include="..\src\wv2_env.h" />
+    <ClInclude Include="..\src\wv2_frame.h" />
     <ClInclude Include="..\src\wv2_webrequest.h" />
     <ClInclude Include="..\src\wv2_webview.h" />
     <ClInclude Include="..\src\wv2_types.h" />

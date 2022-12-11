@@ -1592,3 +1592,239 @@ DLL_EXPORTS(Webview_ScriptDialogOpeningArgs_GetDeferral, BOOL)
 
   return SUCCEEDED(hr);
 }
+
+
+using FaviconChangedCB = HRESULT(CALLBACK*)(LPVOID webview, LPVOID param);
+DLL_EXPORTS(Webview_Attach_FaviconChanged, int64_t)
+(ICoreWebView2* webview, FaviconChangedCB callback, LPVOID param) {
+  if (!webview) return FALSE;
+
+  EventRegistrationToken token;
+
+  WRL::ComPtr<ICoreWebView2_15> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_15>(&tmpWv);
+
+  tmpWv->add_FaviconChanged(
+      WRL::Callback<ICoreWebView2FaviconChangedEventHandler>(
+          [callback, param](
+              ICoreWebView2* sender,
+              IUnknown* args) -> HRESULT {
+            sender->AddRef();
+
+            HRESULT hr = callback(sender, param);
+
+            return hr;
+          })
+          .Get(),
+      &token);
+
+  return token.value;
+}
+
+DLL_EXPORTS(Webview_Detach_FaviconChanged, BOOL)
+(ICoreWebView2* webview, int64_t value) {
+  if (!webview) return FALSE;
+  EventRegistrationToken token = {value};
+
+  WRL::ComPtr<ICoreWebView2_15> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_15>(&tmpWv);
+
+  return SUCCEEDED(tmpWv->remove_FaviconChanged(token));
+}
+
+DLL_EXPORTS(Webview_GetFaviconURL, BOOL)
+(ICoreWebView2* webview, LPVOID* ptr, uint32_t* size) {
+  if (!webview) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2_15> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_15>(&tmpWv);
+
+  LPWSTR value = nullptr;
+  HRESULT hr = tmpWv->get_FaviconUri(&value);
+  
+  *ptr = value;
+  *size = lstrlenW(value) * 2 + 2;
+
+  return SUCCEEDED(hr);
+}
+
+
+using BasicAuthenticationRequestedCB = HRESULT(CALLBACK*)(LPVOID webview, LPVOID args, LPVOID param);
+DLL_EXPORTS(Webview_Attach_BasicAuthenticationRequested, int64_t)
+(ICoreWebView2* webview, BasicAuthenticationRequestedCB callback,
+ LPVOID param) {
+  if (!webview) return FALSE;
+
+  EventRegistrationToken token;
+
+  WRL::ComPtr<ICoreWebView2_15> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_15>(&tmpWv);
+
+  tmpWv->add_BasicAuthenticationRequested(
+      WRL::Callback<ICoreWebView2BasicAuthenticationRequestedEventHandler>(
+          [callback, param](ICoreWebView2* sender,
+                            ICoreWebView2BasicAuthenticationRequestedEventArgs*
+                                args) -> HRESULT {
+            sender->AddRef();
+            args->AddRef();
+
+            HRESULT hr = callback(sender, args, param);
+
+            return hr;
+          })
+          .Get(),
+      &token);
+
+  return token.value;
+}
+
+DLL_EXPORTS(Webview_Detach_BasicAuthenticationRequested, BOOL)
+(ICoreWebView2* webview, int64_t value) {
+  if (!webview) return FALSE;
+  EventRegistrationToken token = {value};
+
+  WRL::ComPtr<ICoreWebView2_15> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_15>(&tmpWv);
+
+  return SUCCEEDED(tmpWv->remove_BasicAuthenticationRequested(token));
+}
+
+
+DLL_EXPORTS(Webview_BasicAuthenticationRequestedArgs_GetDeferral, BOOL)
+(ICoreWebView2BasicAuthenticationRequestedEventArgs* args, LPVOID* ptr) {
+  if (!args) return FALSE;
+  
+  ICoreWebView2Deferral* deferral = nullptr;
+  HRESULT hr = args->GetDeferral(&deferral);
+
+  *ptr = deferral;
+
+  return SUCCEEDED(hr);
+}
+
+DLL_EXPORTS(Webview_BasicAuthenticationRequestedArgs_GetURL, BOOL)
+(ICoreWebView2BasicAuthenticationRequestedEventArgs* args, LPVOID* ptr, uint32_t *size) {
+  if (!args) return FALSE;
+
+  LPWSTR value = nullptr;
+  HRESULT hr = args->get_Uri(&value);
+
+  *ptr = value;
+  *size = lstrlenW(value) * 2 + 2;
+
+  return SUCCEEDED(hr);
+}
+
+DLL_EXPORTS(Webview_BasicAuthenticationRequestedArgs_GetChallenge, BOOL)
+(ICoreWebView2BasicAuthenticationRequestedEventArgs* args, LPVOID* ptr, uint32_t *size) {
+  if (!args) return FALSE;
+
+  LPWSTR value = nullptr;
+  HRESULT hr = args->get_Challenge(&value);
+
+  *ptr = value;
+  *size = lstrlenW(value) * 2 + 2;
+
+  return SUCCEEDED(hr);
+}
+
+DLL_EXPORTS(Webview_BasicAuthenticationRequestedArgs_GetCancel, BOOL)
+(ICoreWebView2BasicAuthenticationRequestedEventArgs* args) {
+  if (!args) return FALSE;
+
+  BOOL value = FALSE;
+  args->get_Cancel(&value);
+
+  return value;
+}
+
+DLL_EXPORTS(Webview_BasicAuthenticationRequestedArgs_SetCancel, BOOL)
+(ICoreWebView2BasicAuthenticationRequestedEventArgs* args, BOOL value) {
+  if (!args) return FALSE;
+
+  return SUCCEEDED(args->put_Cancel(value));
+}
+
+DLL_EXPORTS(Webview_BasicAuthenticationRequestedArgs_UserName_Attr, BOOL)
+(ICoreWebView2BasicAuthenticationRequestedEventArgs* args, LPVOID* ptr,
+ uint32_t* size) {
+  if (!args) return FALSE;
+
+  ICoreWebView2BasicAuthenticationResponse* response = nullptr;
+  HRESULT hr = args->get_Response(&response);
+
+  if (ptr && size) {
+    LPWSTR value = nullptr;
+    response->get_UserName(&value);
+
+    *ptr = value;
+    *size = lstrlenW(value) * 2 + 2;
+  } else {
+    response->put_UserName(reinterpret_cast<LPWSTR>(ptr));
+  }
+
+  return SUCCEEDED(hr);
+}
+
+DLL_EXPORTS(Webview_BasicAuthenticationRequestedArgs_Password_Attr, BOOL)
+(ICoreWebView2BasicAuthenticationRequestedEventArgs* args, LPVOID* ptr,
+ uint32_t* size) {
+  if (!args) return FALSE;
+
+  ICoreWebView2BasicAuthenticationResponse* response = nullptr;
+  HRESULT hr = args->get_Response(&response);
+
+  if (ptr && size) {
+    LPWSTR value = nullptr;
+    response->get_Password(&value);
+
+    *ptr = value;
+    *size = lstrlenW(value) * 2 + 2;
+  } else {
+    response->put_Password(reinterpret_cast<LPWSTR>(ptr));
+  }
+
+  return SUCCEEDED(hr);
+}
+
+
+using FrameCreatedCB = HRESULT(CALLBACK*)(LPVOID webview, LPVOID frame, LPVOID param);
+DLL_EXPORTS(Webview_Attach_FrameCreated, int64_t)
+(ICoreWebView2* webview, FrameCreatedCB callback, LPVOID param) {
+  if (!webview) return FALSE;
+
+  EventRegistrationToken token;
+
+  WRL::ComPtr<ICoreWebView2_15> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_15>(&tmpWv);
+
+  tmpWv->add_FrameCreated(
+      WRL::Callback<ICoreWebView2FrameCreatedEventHandler>(
+          [callback, param](
+              ICoreWebView2* sender,
+              ICoreWebView2FrameCreatedEventArgs* args) -> HRESULT {
+            sender->AddRef();
+
+            ICoreWebView2Frame* frame = nullptr;
+            args->get_Frame(&frame);
+
+            HRESULT hr = callback(sender, frame, param);
+
+            return hr;
+          })
+          .Get(),
+      &token);
+
+  return token.value;
+}
+
+DLL_EXPORTS(Webview_Detach_FrameCreated, BOOL)
+(ICoreWebView2* webview, int64_t value) {
+  if (!webview) return FALSE;
+  EventRegistrationToken token = {value};
+
+  WRL::ComPtr<ICoreWebView2_15> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_15>(&tmpWv);
+
+  return SUCCEEDED(tmpWv->remove_FrameCreated(token));
+}

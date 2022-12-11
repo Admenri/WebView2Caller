@@ -110,6 +110,8 @@ DLL_EXPORTS(ResourceRequest_GetData, BOOL)
   WRL::ComPtr<IStream> is = nullptr;
   auto ret = SUCCEEDED(obj->get_Content(&is));
 
+  if (!is) return FALSE;
+
   STATSTG stat;
   is->Stat(&stat, STATFLAG_NONAME);
 
@@ -542,10 +544,8 @@ DLL_EXPORTS(ResourceResponseView_GetData_Sync, BOOL)
       WRL::Callback<
           ICoreWebView2WebResourceResponseViewGetContentCompletedHandler>(
           [waiter, &is](HRESULT errorCode, IStream* content) -> HRESULT {
-            if (content) {
-              content->AddRef();
+            if (content)
               is = content;
-            }
             ActiveWaitable(waiter);
             return S_OK;
           })
