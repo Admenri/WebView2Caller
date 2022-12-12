@@ -107,7 +107,7 @@ DLL_EXPORTS(Global_CreateEnv_Sync, BOOL)
           })
           .Get());
 
-  WaitOfSleep(waiter, 300);
+  WaitOfMsgLoop(waiter);
 
   return SUCCEEDED(hr);
 }
@@ -292,6 +292,30 @@ DLL_EXPORTS(Env_CreateWebResourceRequest, BOOL)
   ICoreWebView2WebResourceRequest* retObj = nullptr;
   HRESULT hr =
       env->CreateWebResourceRequest(url, method, is.Get(), headers, &retObj);
+
+  *ret = retObj;
+
+  return SUCCEEDED(hr);
+}
+
+DLL_EXPORTS(Env_CreateContextMenuItem, BOOL)
+(ICoreWebView2Environment9* env, LPWSTR label, LPVOID pptr, uint32_t psize,
+ COREWEBVIEW2_CONTEXT_MENU_ITEM_KIND type, LPVOID* ret) {
+  if (!env) return FALSE;
+
+  WRL::ComPtr<IStream> is = nullptr;
+  HGLOBAL hMem = GlobalAlloc(GMEM_ZEROINIT, psize);
+  if (!hMem) return FALSE;
+
+  LPVOID pMem = GlobalLock(hMem);
+  if (!pMem) return FALSE;
+
+  RtlCopyMemory(pMem, pptr, psize);
+  GlobalUnlock(hMem);
+  CreateStreamOnHGlobal(hMem, TRUE, &is);
+
+  ICoreWebView2ContextMenuItem* retObj = nullptr;
+  HRESULT hr = env->CreateContextMenuItem(label, is.Get(), type, &retObj);
 
   *ret = retObj;
 

@@ -33,6 +33,8 @@ DLL_EXPORTS(Object_Release, uint32_t)(IUnknown* obj) {
 
 /*-------------------------------------------------------------------------------*/
 
+#ifdef MSGLOOP_SYNC
+
 struct Waitable {
   BOOL isActive;
   BOOL autoRelease;
@@ -92,9 +94,44 @@ void WaitOfMsgLoop(Waitable* obj) {
     }
   }
 
-  if (obj->autoRelease) delete obj;
+  if (obj->autoRelease) ReleaseWaitable(obj);
 }
 
+#else
+
+struct Waitable {
+  HANDLE pEvent;
+  BOOL autoRelease;
+};
+
+Waitable* CreateWaitable(BOOL release_after_wait) {
+  Waitable* p = new Waitable();
+  p->autoRelease = release_after_wait;
+  p->pEvent = CreateEvent(nullptr, false, false, nullptr);
+  return p;
+}
+
+void ReleaseWaitable(Waitable* obj) {
+  if (obj) CloseHandle(obj->pEvent);
+}
+
+void ActiveWaitable(Waitable* obj) {
+  if (!obj) return;
+  SetEvent(obj->pEvent);
+}
+
+void WaitOfMsgLoop(Waitable* obj) {
+  if (!obj) return;
+
+  DWORD handleIndex = 0;
+  CoWaitForMultipleHandles(COWAIT_DISPATCH_WINDOW_MESSAGES |
+                               COWAIT_DISPATCH_CALLS | COWAIT_INPUTAVAILABLE,
+                           INFINITE, 1, &obj->pEvent, &handleIndex);
+
+  if (obj->autoRelease) ReleaseWaitable(obj);
+}
+
+#endif
 
 DLL_EXPORTS(Utility_Malloc, void*)(uint32_t size) {
   return LocalAlloc(LMEM_ZEROINIT, size);
