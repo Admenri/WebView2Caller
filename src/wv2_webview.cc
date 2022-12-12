@@ -1828,3 +1828,13 @@ DLL_EXPORTS(Webview_Detach_FrameCreated, BOOL)
 
   return SUCCEEDED(tmpWv->remove_FrameCreated(token));
 }
+
+
+DLL_EXPORTS(Webview_NavigateRequest, BOOL)
+(ICoreWebView2_15* webview, ICoreWebView2WebResourceRequest *obj) {
+  if (!webview) return FALSE;
+  
+  HRESULT hr = webview->NavigateWithWebResourceRequest(obj);
+
+  return SUCCEEDED(hr);
+}
