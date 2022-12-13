@@ -33,6 +33,7 @@ DLL_EXPORTS(Object_Release, uint32_t)(IUnknown* obj) {
 
 /*-------------------------------------------------------------------------------*/
 
+#define MSGLOOP_SYNC
 #ifdef MSGLOOP_SYNC
 
 struct Waitable {
