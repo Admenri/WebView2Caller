@@ -177,3 +177,60 @@ DLL_EXPORTS(Controller_Detach_AcceleratorKeyPressed, BOOL)
 
   return SUCCEEDED(controller->remove_AcceleratorKeyPressed(token));
 }
+
+
+DLL_EXPORTS(Controller_GetAllowExternalDrop, BOOL)
+(ICoreWebView2Controller* controller) {
+  if (!controller) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2Controller4> con = nullptr;
+  controller->QueryInterface<ICoreWebView2Controller4>(&con);
+
+  BOOL value = FALSE;
+  con->get_AllowExternalDrop(&value);
+
+  return value;
+}
+
+DLL_EXPORTS(Controller_SetAllowExternalDrop, BOOL)
+(ICoreWebView2Controller* controller, BOOL allow) {
+  if (!controller) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2Controller4> con = nullptr;
+  controller->QueryInterface<ICoreWebView2Controller4>(&con);
+
+  return con->put_AllowExternalDrop(allow);
+}
+
+
+using ZoomFactorChangedCB = BOOL(CALLBACK*)(LPVOID controller, LPVOID param);
+DLL_EXPORTS(Controller_Attach_ZoomFactorChanged, int64_t)
+(ICoreWebView2Controller* controller, ZoomFactorChangedCB callback,
+ LPVOID param) {
+  if (!controller) return FALSE;
+
+  EventRegistrationToken token;
+
+  controller->add_ZoomFactorChanged(
+      WRL::Callback<ICoreWebView2ZoomFactorChangedEventHandler>(
+          [callback, param](ICoreWebView2Controller* sender,
+                            IUnknown* args) -> HRESULT {
+            sender->AddRef();
+
+            BOOL hr = callback(sender, param);
+
+            return S_OK;
+          })
+          .Get(),
+      &token);
+
+  return token.value;
+}
+
+DLL_EXPORTS(Controller_Detach_ZoomFactorChanged, BOOL)
+(ICoreWebView2Controller* controller, int64_t value) {
+  if (!controller) return FALSE;
+  EventRegistrationToken token = {value};
+
+  return SUCCEEDED(controller->remove_ZoomFactorChanged(token));
+}

@@ -1,8 +1,9 @@
 
 #include "wv2_env.h"
-#include "wv2_utils.h"
 
 #include <UrlMon.h>
+
+#include "wv2_utils.h"
 #pragma comment(lib, "urlmon.lib")
 
 using namespace Microsoft;
@@ -49,7 +50,7 @@ static DWORD WINAPI DownloadAndInstallWV2RT(_In_ LPVOID lpParameter) {
       returnCode = 1;  // Install failed
     }
   }
-  
+
   // Execute callback
   if (lpParameter) static_cast<DownloadRuntimeCB>(lpParameter)(returnCode);
   return returnCode;
@@ -75,8 +76,7 @@ struct EnvCreateSettings {
 };
 
 DLL_EXPORTS(Global_CreateEnv_Sync, BOOL)
-(EnvCreateSettings* settings, LPCWSTR path, LPCWSTR userData,
- LPVOID* retPtr) {
+(EnvCreateSettings* settings, LPCWSTR path, LPCWSTR userData, LPVOID* retPtr) {
   auto options = WRL::Make<CoreWebView2EnvironmentOptions>();
 
   if (settings) {
@@ -112,25 +112,21 @@ DLL_EXPORTS(Global_CreateEnv_Sync, BOOL)
   return SUCCEEDED(hr);
 }
 
-
-
 using CreateControllerCB = HRESULT(CALLBACK*)(LPVOID controller, LPVOID param);
 
 DLL_EXPORTS(Env_CreateController, BOOL)
-(ICoreWebView2Environment* env, HWND hwnd, RECT* lpRect, CreateControllerCB callback, LPVOID param) {
+(ICoreWebView2Environment* env, HWND hwnd, CreateControllerCB callback,
+ LPVOID param) {
   if (!env) return FALSE;
 
   HRESULT hr = env->CreateCoreWebView2Controller(
       hwnd,
       WRL::Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
-          [lpRect, callback, param](
+          [callback, param](
               HRESULT errorCode,
               ICoreWebView2Controller* createdController) -> HRESULT {
             if (createdController) {
-              if (createdController) {
-                createdController->AddRef();
-                createdController->put_Bounds(*lpRect);
-              }
+              if (createdController) createdController->AddRef();
 
               return callback(createdController, param);
             } else
@@ -142,21 +138,18 @@ DLL_EXPORTS(Env_CreateController, BOOL)
 }
 
 DLL_EXPORTS(Env_CreateController_Sync, BOOL)
-(ICoreWebView2Environment* env, HWND hwnd, RECT* lpRect, LPVOID* retPtr) {
+(ICoreWebView2Environment* env, HWND hwnd, LPVOID* retPtr) {
   if (!env) return FALSE;
   Waitable* waiter = CreateWaitable(true);
 
   HRESULT hr = env->CreateCoreWebView2Controller(
       hwnd,
       WRL::Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
-          [waiter, retPtr, lpRect](
+          [waiter, retPtr](
               HRESULT errorCode,
               ICoreWebView2Controller* createdController) -> HRESULT {
             if (createdController) {
-              if (createdController) {
-                createdController->AddRef();
-                createdController->put_Bounds(*lpRect);
-              }
+              if (createdController) createdController->AddRef();
 
               *retPtr = createdController;
               ActiveWaitable(waiter);
@@ -178,7 +171,7 @@ struct ControllerSettings {
 };
 DLL_EXPORTS(Env_CreateController_Options, BOOL)
 (ICoreWebView2Environment10* env, HWND hwnd, ControllerSettings* settings,
- RECT* lpRect, CreateControllerCB callback, LPVOID param) {
+ CreateControllerCB callback, LPVOID param) {
   if (!env) return FALSE;
 
   WRL::ComPtr<ICoreWebView2ControllerOptions> options = nullptr;
@@ -192,14 +185,11 @@ DLL_EXPORTS(Env_CreateController_Options, BOOL)
   HRESULT hr = env->CreateCoreWebView2ControllerWithOptions(
       hwnd, options.Get(),
       WRL::Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
-          [lpRect, callback, param](
+          [callback, param](
               HRESULT errorCode,
               ICoreWebView2Controller* createdController) -> HRESULT {
             if (createdController) {
-              if (createdController) {
-                createdController->AddRef();
-                createdController->put_Bounds(*lpRect);
-              }
+              if (createdController) createdController->AddRef();
 
               return callback(createdController, param);
             } else
@@ -211,7 +201,7 @@ DLL_EXPORTS(Env_CreateController_Options, BOOL)
 }
 
 DLL_EXPORTS(Env_CreateController_Options_Sync, BOOL)
-(ICoreWebView2Environment10* env, HWND hwnd, ControllerSettings *settings, RECT* lpRect,
+(ICoreWebView2Environment10* env, HWND hwnd, ControllerSettings* settings,
  LPVOID* retPtr) {
   if (!env) return FALSE;
   Waitable* waiter = CreateWaitable(true);
@@ -227,14 +217,11 @@ DLL_EXPORTS(Env_CreateController_Options_Sync, BOOL)
   HRESULT hr = env->CreateCoreWebView2ControllerWithOptions(
       hwnd, options.Get(),
       WRL::Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
-          [waiter, retPtr, lpRect](
+          [waiter, retPtr](
               HRESULT errorCode,
               ICoreWebView2Controller* createdController) -> HRESULT {
             if (createdController) {
-              if (createdController) {
-                createdController->AddRef();
-                createdController->put_Bounds(*lpRect);
-              }
+              if (createdController) createdController->AddRef();
 
               *retPtr = createdController;
               ActiveWaitable(waiter);
@@ -251,7 +238,8 @@ DLL_EXPORTS(Env_CreateController_Options_Sync, BOOL)
 }
 
 DLL_EXPORTS(Env_CreateWebResourceResponse, BOOL)
-(ICoreWebView2Environment* env, LPVOID pptr, uint32_t psize, int code, LPWSTR reason, LPWSTR headers, LPVOID* ret) {
+(ICoreWebView2Environment* env, LPVOID pptr, uint32_t psize, int code,
+ LPWSTR reason, LPWSTR headers, LPVOID* ret) {
   if (!env) return FALSE;
 
   WRL::ComPtr<IStream> is = nullptr;
@@ -266,7 +254,8 @@ DLL_EXPORTS(Env_CreateWebResourceResponse, BOOL)
   CreateStreamOnHGlobal(hMem, TRUE, &is);
 
   ICoreWebView2WebResourceResponse* retObj = nullptr;
-  HRESULT hr = env->CreateWebResourceResponse(is.Get(), code, reason, headers, &retObj);
+  HRESULT hr =
+      env->CreateWebResourceResponse(is.Get(), code, reason, headers, &retObj);
 
   *ret = retObj;
 

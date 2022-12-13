@@ -1879,3 +1879,43 @@ DLL_EXPORTS(Webview_Detach_ContextMenuRequested, BOOL)
 
   return SUCCEEDED(tmpWv->remove_ContextMenuRequested(token));
 }
+
+
+using DownloadStartingCB = HRESULT(CALLBACK*)(LPVOID webview, LPVOID args, LPVOID param);
+DLL_EXPORTS(Webview_Attach_DownloadStarting, int64_t)
+(ICoreWebView2* webview, DownloadStartingCB callback, LPVOID param) {
+  if (!webview) return FALSE;
+
+  EventRegistrationToken token;
+
+  WRL::ComPtr<ICoreWebView2_15> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_15>(&tmpWv);
+
+  tmpWv->add_DownloadStarting(
+      WRL::Callback<ICoreWebView2DownloadStartingEventHandler>(
+          [callback, param](
+              ICoreWebView2* sender,
+              ICoreWebView2DownloadStartingEventArgs* args) -> HRESULT {
+            sender->AddRef();
+            args->AddRef();
+
+            HRESULT hr = callback(sender, args, param);
+
+            return hr;
+          })
+          .Get(),
+      &token);
+
+  return token.value;
+}
+
+DLL_EXPORTS(Webview_Detach_DownloadStarting, BOOL)
+(ICoreWebView2* webview, int64_t value) {
+  if (!webview) return FALSE;
+  EventRegistrationToken token = {value};
+
+  WRL::ComPtr<ICoreWebView2_15> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_15>(&tmpWv);
+
+  return SUCCEEDED(tmpWv->remove_DownloadStarting(token));
+}
