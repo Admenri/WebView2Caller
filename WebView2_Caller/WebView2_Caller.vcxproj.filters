@@ -85,11 +85,9 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config">
-      <Filter>res</Filter>
-    </None>
     <None Include="..\CodesLab\ewebview2.e">
       <Filter>e_port</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

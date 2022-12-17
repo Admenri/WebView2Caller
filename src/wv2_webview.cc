@@ -89,18 +89,21 @@ DLL_EXPORTS(Webview_ExecuteScript, BOOL)
       script, WRL::Callback<ICoreWebView2ExecuteScriptCompletedHandler>(
                   [callback, param](HRESULT errorCode,
                                     LPCWSTR resultObjectAsJson) -> HRESULT {
-                    if (callback) {
-                      uint32_t sizeTmp = lstrlenW(resultObjectAsJson) * 2 + 2;
-                      LPWSTR newStr =
-                          static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
-                      if (newStr) {
-                        newStr[sizeTmp - 1] = 0;
-                        lstrcpyW(newStr, resultObjectAsJson);
-                      }
+                    if (resultObjectAsJson) {
+                      if (callback) {
+                        uint32_t sizeTmp = lstrlenW(resultObjectAsJson) * 2 + 2;
+                        LPWSTR newStr =
+                            static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
+                        if (newStr) {
+                          newStr[sizeTmp - 1] = 0;
+                          lstrcpyW(newStr, resultObjectAsJson);
+                        }
 
-                      return callback(errorCode, newStr, sizeTmp, param);
+                        return callback(errorCode, newStr, sizeTmp, param);
+                      }
                     } else
-                      return S_OK;
+                      callback(errorCode, 0, 0, param);
+                    return S_OK;
                   })
                   .Get()));
 
@@ -117,14 +120,20 @@ DLL_EXPORTS(Webview_ExecuteScript_Sync, BOOL)
       script, WRL::Callback<ICoreWebView2ExecuteScriptCompletedHandler>(
                   [waiter, ptr, size](HRESULT errorCode,
                                       LPCWSTR resultObjectAsJson) -> HRESULT {
-                    uint32_t sizeTmp = lstrlenW(resultObjectAsJson) * 2 + 2;
-                    LPWSTR newStr = static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
-                    if (newStr) {
-                      newStr[sizeTmp - 1] = 0;
-                      lstrcpyW(newStr, resultObjectAsJson);
+                    if (resultObjectAsJson) {
+                      uint32_t sizeTmp = lstrlenW(resultObjectAsJson) * 2 + 2;
+                      LPWSTR newStr =
+                          static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
+                      if (newStr) {
+                        newStr[sizeTmp - 1] = 0;
+                        lstrcpyW(newStr, resultObjectAsJson);
 
-                      *ptr = newStr;
-                      *size = sizeTmp;
+                        *ptr = newStr;
+                        *size = sizeTmp;
+                      }
+                    } else {
+                      *ptr = nullptr;
+                      *size = 0;
                     }
 
                     ActiveWaitable(waiter);
@@ -1472,6 +1481,85 @@ DLL_EXPORTS(Webview_PostWebMessageAsJSON, BOOL)
   return SUCCEEDED(webview->PostWebMessageAsJson(str));
 }
 
+
+DLL_EXPORTS(Webview_WebMessageReceivedArgs_GetURL, BOOL)
+(ICoreWebView2WebMessageReceivedEventArgs* webview, LPWSTR* ptr,
+ uint32_t* size) {
+  if (!webview) return FALSE;
+
+  LPWSTR source = nullptr;
+  HRESULT hr = webview->get_Source(&source);
+
+  *ptr = source;
+  *size = lstrlenW(source) * 2 + 2;
+
+  return SUCCEEDED(hr);
+}
+
+DLL_EXPORTS(Webview_WebMessageReceivedArgs_GetMessageAsJSON, BOOL)
+(ICoreWebView2WebMessageReceivedEventArgs* webview, LPWSTR* ptr,
+ uint32_t* size) {
+  if (!webview) return FALSE;
+
+  LPWSTR source = nullptr;
+  HRESULT hr = webview->get_WebMessageAsJson(&source);
+
+  *ptr = source;
+  *size = lstrlenW(source) * 2 + 2;
+
+  return SUCCEEDED(hr);
+}
+
+DLL_EXPORTS(Webview_WebMessageReceivedArgs_TryGetString, BOOL)
+(ICoreWebView2WebMessageReceivedEventArgs* webview, LPWSTR* ptr,
+ uint32_t* size) {
+  if (!webview) return FALSE;
+
+  LPWSTR source = nullptr;
+  HRESULT hr = webview->TryGetWebMessageAsString(&source);
+
+  *ptr = source;
+  *size = lstrlenW(source) * 2 + 2;
+
+  return SUCCEEDED(hr);
+}
+
+using WebMessageReceivedCB = HRESULT(CALLBACK*)(LPVOID webview, LPVOID args,
+                                                 LPVOID param);
+DLL_EXPORTS(Webview_Attach_WebMessageReceived, int64_t)
+(ICoreWebView2* webview, WebMessageReceivedCB callback, LPVOID param) {
+  if (!webview) return FALSE;
+
+  EventRegistrationToken token;
+
+  webview->add_WebMessageReceived(
+      WRL::Callback<ICoreWebView2WebMessageReceivedEventHandler>(
+          [callback, param](
+              ICoreWebView2* sender,
+              ICoreWebView2WebMessageReceivedEventArgs* args) -> HRESULT {
+            sender->AddRef();
+            args->AddRef();
+
+            HRESULT hr = callback(sender, args, param);
+
+            return hr;
+          })
+          .Get(),
+      &token);
+
+  return token.value;
+}
+
+DLL_EXPORTS(Webview_Detach_WebMessageReceived, BOOL)
+(ICoreWebView2* webview, int64_t value) {
+  if (!webview) return FALSE;
+  EventRegistrationToken token = {value};
+
+  return SUCCEEDED(webview->remove_WebMessageReceived(token));
+}
+
+
+
 using ScriptDialogOpeningCB = HRESULT(CALLBACK*)(LPVOID webview, LPVOID args, LPVOID param);
 DLL_EXPORTS(Webview_Attach_ScriptDialogOpening, int64_t)
 (ICoreWebView2* webview, ScriptDialogOpeningCB callback, LPVOID param) {
@@ -1848,8 +1936,8 @@ DLL_EXPORTS(Webview_Attach_ContextMenuRequested, int64_t)
 
   EventRegistrationToken token;
 
-  WRL::ComPtr<ICoreWebView2_15> tmpWv = nullptr;
-  webview->QueryInterface<ICoreWebView2_15>(&tmpWv);
+  WRL::ComPtr<ICoreWebView2_11> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_11>(&tmpWv);
 
   tmpWv->add_ContextMenuRequested(
       WRL::Callback<ICoreWebView2ContextMenuRequestedEventHandler>(
@@ -1874,8 +1962,8 @@ DLL_EXPORTS(Webview_Detach_ContextMenuRequested, BOOL)
   if (!webview) return FALSE;
   EventRegistrationToken token = {value};
 
-  WRL::ComPtr<ICoreWebView2_15> tmpWv = nullptr;
-  webview->QueryInterface<ICoreWebView2_15>(&tmpWv);
+  WRL::ComPtr<ICoreWebView2_11> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_11>(&tmpWv);
 
   return SUCCEEDED(tmpWv->remove_ContextMenuRequested(token));
 }
@@ -1888,8 +1976,8 @@ DLL_EXPORTS(Webview_Attach_DownloadStarting, int64_t)
 
   EventRegistrationToken token;
 
-  WRL::ComPtr<ICoreWebView2_15> tmpWv = nullptr;
-  webview->QueryInterface<ICoreWebView2_15>(&tmpWv);
+  WRL::ComPtr<ICoreWebView2_4> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_4>(&tmpWv);
 
   tmpWv->add_DownloadStarting(
       WRL::Callback<ICoreWebView2DownloadStartingEventHandler>(
@@ -1914,8 +2002,8 @@ DLL_EXPORTS(Webview_Detach_DownloadStarting, BOOL)
   if (!webview) return FALSE;
   EventRegistrationToken token = {value};
 
-  WRL::ComPtr<ICoreWebView2_15> tmpWv = nullptr;
-  webview->QueryInterface<ICoreWebView2_15>(&tmpWv);
+  WRL::ComPtr<ICoreWebView2_4> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_4>(&tmpWv);
 
   return SUCCEEDED(tmpWv->remove_DownloadStarting(token));
 }
