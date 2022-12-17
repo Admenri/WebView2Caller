@@ -104,7 +104,6 @@ DLL_EXPORTS(Frame_ExecuteScript, BOOL)
                       LPWSTR newStr =
                           static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
                       if (newStr) {
-                        newStr[sizeTmp - 1] = 0;
                         lstrcpyW(newStr, resultObjectAsJson);
                       }
 
@@ -131,7 +130,6 @@ DLL_EXPORTS(Frame_ExecuteScript_Sync, BOOL)
                     LPWSTR newStr =
                         static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
                     if (newStr) {
-                      newStr[sizeTmp - 1] = 0;
                       lstrcpyW(newStr, resultObjectAsJson);
 
                       *ptr = newStr;

@@ -95,7 +95,6 @@ DLL_EXPORTS(Webview_ExecuteScript, BOOL)
                         LPWSTR newStr =
                             static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
                         if (newStr) {
-                          newStr[sizeTmp - 1] = 0;
                           lstrcpyW(newStr, resultObjectAsJson);
                         }
 
@@ -120,12 +119,12 @@ DLL_EXPORTS(Webview_ExecuteScript_Sync, BOOL)
       script, WRL::Callback<ICoreWebView2ExecuteScriptCompletedHandler>(
                   [waiter, ptr, size](HRESULT errorCode,
                                       LPCWSTR resultObjectAsJson) -> HRESULT {
-                    if (resultObjectAsJson) {
+                    if (!ptr || !size) return S_OK;
+                    if (resultObjectAsJson && errorCode == S_OK) {
                       uint32_t sizeTmp = lstrlenW(resultObjectAsJson) * 2 + 2;
                       LPWSTR newStr =
                           static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
                       if (newStr) {
-                        newStr[sizeTmp - 1] = 0;
                         lstrcpyW(newStr, resultObjectAsJson);
 
                         *ptr = newStr;
@@ -138,7 +137,7 @@ DLL_EXPORTS(Webview_ExecuteScript_Sync, BOOL)
 
                     ActiveWaitable(waiter);
 
-                    return S_OK;
+                    return errorCode;
                   })
                   .Get()));
 
@@ -189,7 +188,6 @@ DLL_EXPORTS(Webview_CallDevtoolsProtocolsMethod, BOOL)
               uint32_t sizeTmp = lstrlenW(returnObjectAsJson) * 2 + 2;
               LPWSTR newStr = static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
               if (newStr) {
-                newStr[sizeTmp - 1] = 0;
                 lstrcpyW(newStr, returnObjectAsJson);
               }
 
@@ -218,7 +216,6 @@ DLL_EXPORTS(Webview_CallDevtoolsProtocolsMethod_Sync, BOOL)
                     LPWSTR newStr =
                         static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
                     if (newStr) {
-                      newStr[sizeTmp - 1] = 0;
                       lstrcpyW(newStr, resultObjectAsJson);
 
                       *ptr = newStr;
@@ -1416,7 +1413,6 @@ DLL_EXPORTS(Webview_AddPreloadScript, BOOL)
               uint32_t sizeTmp = lstrlenW(id) * 2 + 2;
               LPWSTR newStr = static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
               if (newStr) {
-                newStr[sizeTmp - 1] = 0;
                 lstrcpyW(newStr, id);
               }
               return callback(newStr, sizeTmp, param);
@@ -1442,7 +1438,6 @@ DLL_EXPORTS(Webview_AddPreloadScript_Sync, BOOL)
             uint32_t sizeTmp = lstrlenW(id) * 2 + 2;
             LPWSTR newStr = static_cast<LPWSTR>(wv2_Utility_Malloc(sizeTmp));
             if (newStr) {
-              newStr[sizeTmp - 1] = 0;
               lstrcpyW(newStr, id);
             }
 
