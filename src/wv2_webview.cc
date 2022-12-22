@@ -2002,3 +2002,157 @@ DLL_EXPORTS(Webview_Detach_DownloadStarting, BOOL)
 
   return SUCCEEDED(tmpWv->remove_DownloadStarting(token));
 }
+
+
+using ContentLoadingCB = HRESULT(CALLBACK*)(LPVOID webview, BOOL isErrorPage,
+                                            uint64_t navId, LPVOID param);
+DLL_EXPORTS(Webview_Attach_ContentLoading, int64_t)
+(ICoreWebView2* webview, ContentLoadingCB callback, LPVOID param) {
+  if (!webview) return FALSE;
+
+  EventRegistrationToken token;
+
+  WRL::ComPtr<ICoreWebView2_4> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_4>(&tmpWv);
+
+  tmpWv->add_ContentLoading(
+      WRL::Callback<ICoreWebView2ContentLoadingEventHandler>(
+          [callback, param](
+              ICoreWebView2* sender,
+              ICoreWebView2ContentLoadingEventArgs* args) -> HRESULT {
+            sender->AddRef();
+
+            BOOL isErr = FALSE;
+            uint64_t nav = 0;
+
+            args->get_IsErrorPage(&isErr);
+            args->get_NavigationId(&nav);
+
+            HRESULT hr = callback(sender, isErr, nav, param);
+
+            return hr;
+          })
+          .Get(),
+      &token);
+
+  return token.value;
+}
+
+DLL_EXPORTS(Webview_Detach_ContentLoading, BOOL)
+(ICoreWebView2* webview, int64_t value) {
+  if (!webview) return FALSE;
+  EventRegistrationToken token = {value};
+
+  WRL::ComPtr<ICoreWebView2_4> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_4>(&tmpWv);
+
+  return SUCCEEDED(tmpWv->remove_ContentLoading(token));
+}
+
+
+using StatusBarTextChangedCB = HRESULT(CALLBACK*)(LPVOID webview, LPVOID param);
+DLL_EXPORTS(Webview_Attach_StatusBarTextChanged, int64_t)
+(ICoreWebView2* webview, StatusBarTextChangedCB callback, LPVOID param) {
+  if (!webview) return FALSE;
+
+  EventRegistrationToken token;
+
+  WRL::ComPtr<ICoreWebView2_15> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_15>(&tmpWv);
+
+  tmpWv->add_StatusBarTextChanged(
+      WRL::Callback<ICoreWebView2StatusBarTextChangedEventHandler>(
+          [callback, param](
+              ICoreWebView2* sender,
+              IUnknown* args) -> HRESULT {
+            sender->AddRef();
+
+            HRESULT hr = callback(sender, param);
+
+            return hr;
+          })
+          .Get(),
+      &token);
+
+  return token.value;
+}
+
+DLL_EXPORTS(Webview_Detach_StatusBarTextChanged, BOOL)
+(ICoreWebView2* webview, int64_t value) {
+  if (!webview) return FALSE;
+  EventRegistrationToken token = {value};
+
+  WRL::ComPtr<ICoreWebView2_15> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_15>(&tmpWv);
+
+  return SUCCEEDED(tmpWv->remove_StatusBarTextChanged(token));
+}
+
+DLL_EXPORTS(Webview_GetStatusBarText, BOOL)
+(ICoreWebView2* webview, LPVOID* ptr, uint32_t* size) {
+  if (!webview) return FALSE;
+
+  WRL::ComPtr<ICoreWebView2_15> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_15>(&tmpWv);
+
+  LPWSTR value = nullptr;
+  HRESULT hr = tmpWv->get_StatusBarText(&value);
+
+  *ptr = value;
+  *size = lstrlenW(value) * 2 + 2;
+
+  return SUCCEEDED(hr);
+}
+
+
+using ClientCertificateRequestedCB = HRESULT(CALLBACK*)(LPVOID webview, LPVOID args, LPVOID param);
+DLL_EXPORTS(Webview_Attach_ClientCertificateRequested, int64_t)
+(ICoreWebView2* webview, ClientCertificateRequestedCB callback, LPVOID param) {
+  if (!webview) return FALSE;
+
+  EventRegistrationToken token;
+
+  WRL::ComPtr<ICoreWebView2_15> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_15>(&tmpWv);
+
+  tmpWv->add_ClientCertificateRequested(
+      WRL::Callback<ICoreWebView2ClientCertificateRequestedEventHandler>(
+          [callback, param](ICoreWebView2* sender,
+                            ICoreWebView2ClientCertificateRequestedEventArgs*
+                                args) -> HRESULT {
+            sender->AddRef();
+            args->AddRef();
+
+            HRESULT hr = callback(sender, args, param);
+
+            return hr;
+          })
+          .Get(),
+      &token);
+
+  return token.value;
+}
+
+DLL_EXPORTS(Webview_Detach_ClientCertificateRequested, BOOL)
+(ICoreWebView2* webview, int64_t value) {
+  if (!webview) return FALSE;
+  EventRegistrationToken token = {value};
+
+  WRL::ComPtr<ICoreWebView2_15> tmpWv = nullptr;
+  webview->QueryInterface<ICoreWebView2_15>(&tmpWv);
+
+  return SUCCEEDED(tmpWv->remove_ClientCertificateRequested(token));
+}
+
+
+DLL_EXPORTS(Webview_ClientCert_GetDeferral, BOOL)
+(ICoreWebView2ClientCertificateRequestedEventArgs* args, LPVOID* ptr) {
+  if (!args) return FALSE;
+
+  ICoreWebView2Deferral* deferral = nullptr;
+  HRESULT hr = args->GetDeferral(&deferral);
+
+  *ptr = deferral;
+
+  return SUCCEEDED(hr);
+}
