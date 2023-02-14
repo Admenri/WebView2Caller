@@ -1,0 +1,40 @@
+
+; -------------------------------------------------------------
+; 本节用作定义对应易语言程序的一些全局设置信息
+
+[settings]
+
+; 提供本e8文件内所包含的一个易语言程序文件(.e)/易语言模块文件(.ec)/易语言文本代码文件名(.txt或其它后缀),如果不是绝对路径,则认为是相对于本e8文件所处目录的相对路径.
+; 可以同时定义多个"source"属性,以同时提供多个文件名,系统将会自动将这些文件合并到一起后打开,重复的程序启动代码将会被自动滤除(具体为"_启动窗口"及其程序集,"_启动子程序").
+; 注意: 只要提供了一个易语言模块文件(.ec),那么所有在此处列出的易语言程序文件(.e)中的原有易语言模块文件在合并前都会被首先清除.
+
+source = /src/dll.e
+source = ewebview2.e
+
+; -------------------------------------------------------------
+; 本节用作定义对应易语言程序的程序设置信息
+
+[AppSettings]
+
+; 用作设置本程序的类型,可以为以下值之一:  WinEXE, WinConsoleEXE, WinDLL, WinECom, LinuxConsoleELF, LinuxECom
+type = WinECom
+
+name = "WebView2Caller - DLL"
+explain = ""
+author = ""
+ZipCode = 
+address = ""
+photo = ""
+fax = ""
+email = ""
+HomePage = ""
+copyright = ""
+MajorVersion = 1
+MinorVersion = 0
+BuildNO1 = 0
+BuildNO2 = 0
+plugins = ""
+EnableExportPublicMethod = FALSE
+
+; 提供编译输出文件名.如果不是绝对路径,则认为是相对于本e8文件所处目录的相对路径.
+OutputFileName = "WebView2Caller.ec"
